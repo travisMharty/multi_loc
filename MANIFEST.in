@@ -1,0 +1,2 @@
+include versioneer.py
+include multi_loc/_version.py
