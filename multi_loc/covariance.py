@@ -24,6 +24,12 @@ def correlation_matern(rho, rho0, nu=2.5):
 
     nu : Scalar
         Smoothness parameter. Must be positive real.
+
+    Returns
+    -------
+    corr : array_like
+        Correlation of different positions whose distances were given by rho.
+        Same shape as rho.
     """
     rho1 = np.sqrt(2 * nu) * np.abs(rho) / rho0
     zero_indices = np.where(rho1 == 0)[0]
@@ -49,6 +55,12 @@ def correlation_exp(rho, rho0, nu=None):
 
     nu : Scalar
         Unused dummy variable
+
+    Returns
+    -------
+    corr : array_like
+        Correlation of different positions whose distances were given by rho.
+        Same shape as rho.
     """
     if nu is not None:
         print("nu is unused")
@@ -71,6 +83,12 @@ def correlation_sqd_exp(rho, rho0, nu=None):
 
     nu : Scalar
         Unused dummy variable
+
+    Returns
+    -------
+    corr : array_like
+        Correlation of different positions whose distances were given by rho.
+        Same shape as rho.
     """
     if nu is not None:
         print("nu is unused")
@@ -78,10 +96,10 @@ def correlation_sqd_exp(rho, rho0, nu=None):
     return corr
 
 
-def make_correlation_matrix(rho, rho0, correlation, nu=None):
+def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     """
-    Return correlation as evaluated by the squared exponential covariance
-    function.
+    Return correlation matrix for distances rho, using the correlaiton_function
+    and parameters rho0 and nu.
 
     Parameters
     ----------
@@ -91,18 +109,25 @@ def make_correlation_matrix(rho, rho0, correlation, nu=None):
     rho0 : Scalar
         Characteristic distance.
 
-    correlation : function
-        Correlation function such that correlation(rho, rho0, nu) returns the
+    correlation_fun : function
+        Correlation function such that correlation_fun(rho, rho0, nu) returns the
         desired correlation for distances rho.
 
     nu : Scalar
         Matern smootheness parameter. Should be None is correlation is not
         correlation_matern.
+
+    Returns
+    -------
+    Corr : array_like
+        Correlation matrix based on the distances defined by rho and
+        correlation_fun with parameters rho0 and nu. If n = rho.size, then
+        (n, n) = rho.shape.
     """
     rho_size = rho.size
-    cor_vec = correlation(rho, rho0, nu)
-    corr = np.zeros([rho_size, rho_size])
+    cor_vec = correlation_fun(rho, rho0, nu)
+    Corr = np.zeros([rho_size, rho_size])
     cor_vec = np.concatenate([cor_vec[:0:-1], cor_vec])
     for i in range(rho_size):
-        corr[i] = cor_vec[rho_size-1 - i:2 * rho_size - 1 - i]
-    return corr
+        Corr[i] = cor_vec[rho_size-1 - i:2 * rho_size - 1 - i]
+    return Corr
