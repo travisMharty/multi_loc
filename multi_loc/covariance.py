@@ -5,7 +5,8 @@ import scipy.special
 
 def correlation_matern(rho, rho0, nu=2.5):
     """
-    Return correlation as evaluated by the Matern correlation function
+    Return correlation as evaluated by the Matern correlation function.
+    https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function
 
     If nu = 0.5 then the Matern correlation function is equivalent to the
     exponential covariance function.
