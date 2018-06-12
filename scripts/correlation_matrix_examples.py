@@ -1,203 +1,141 @@
 import numpy as np
 import scipy as sp
 import scipy.special
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import multi_loc.covariance as covariance
+
+def main():
+    # Compare matern to exp
+    rho = np.arange(10)
+    rho0 = 10
+    nu = .5
+
+    print('nu: ', nu)
+    print('matern: ', covariance.correlation_matern(rho, rho0, nu), '\n')
+
+    print('exp: ', covariance.correlation_exp(rho, rho0, nu), '\n')
+
+    # compare matern to sqd_exp
+    rho = np.arange(10)
+    rho0 = 10
+    nu = 150
+
+
+    print('nu: ', nu)
+    print('matern: ', covariance.correlation_matern(rho, rho0, nu), '\n')
+
+    print('sqd_exp: ', covariance.correlation_sqd_exp(rho, rho0, nu), '\n')
+
+    # plot example covariance matrix for a ring
+    dimension = 100
+    rho0 = 20
+    rho = np.arange(dimension, dtype=float)
+    rho = np.minimum(rho % dimension, (dimension - rho) % dimension)
+
+    cov_P = covariance.make_correlation_matrix(rho, rho0,
+                                           covariance.correlation_sqd_exp)
+
+    plt.figure()
+    image = plt.imshow(cov_P)
+    plt.colorbar(image)
+    plt.title('Covariance matrix for a ring')
+    plt.show(block=False)
+
+    eig_val, eig_vec = sp.linalg.eigh(cov_P)
+    eig_val = eig_val.clip(min=0)
+    eig_val = eig_val[::-1]
+    eig_vec = eig_vec[:, ::-1]
+
+    plt.figure()
+    plt.semilogy(eig_val)
+    plt.title('Eigenvalues after clipping at zero')
+    plt.ylabel('Eigenvalue')
+    plt.xlabel('Eigenvalue number')
+    plt.show(block=False)
+
+    sqrt_P = eig_vec @ np.diag(np.sqrt(eig_val)) @ eig_vec.T
+
+    plt.figure()
+    image = plt.imshow(sqrt_P @ sqrt_P)
+    plt.colorbar(image)
+    plt.title('Reconstructed covariance matrix')
+    plt.show(block=False)
+
+
+    # # Check ensemble est. of covariance
+    dimension = 100
+    ens_size = 100
+    rho0 = 0.1
+    num_realizations = 200
+    subspace_dim = 5
+    nu = 3/2
+    rho = np.arange(dimension)/dimension
+
+    cov_P = covariance.make_correlation_matrix(
+        rho, rho0, covariance.correlation_matern, nu=nu)
+
+    eig_val, eig_vec = sp.linalg.eigh(cov_P)
+    eig_val = eig_val.clip(min=0)
+    eig_val = eig_val[::-1]
+    eig_vec = eig_vec[:, ::-1]
+    sqrt_P = eig_vec @ np.sqrt(cov_P) @ eig_vec.T
+    eig_vec_save = np.zeros([dimension, subspace_dim, num_realizations])
+    eig_val_save = np.zeros([subspace_dim, num_realizations])
+
+    for ii in range(num_realizations):
+        ens_X = sqrt_P @ np.random.randn(dimension, ens_size)
+        ens_X = ens_X - np.repeat(ens_X.mean(axis=1)[:, None], ens_size, axis=1)
+        ens_X = ens_X / np.sqrt(ens_size - 1)
+        hat_P = ens_X @ ens_X.T
+        eig_val_save[:, ii], eig_vec_save[:, :, ii] = sp.linalg.eigh(
+            hat_P, eigvals=((dimension - subspace_dim), dimension - 1))
+
+    max_lambda = np.zeros([num_realizations, num_realizations])
+    min_lambda = max_lambda.copy()
+    sum_lambda = max_lambda.copy()
+    for ii in range(num_realizations):
+        for jj in range(num_realizations):
+            IPs = eig_vec_save[:, :, ii].T @ eig_vec_save[:, :, jj]
+            singular_values = sp.linalg.svd(IPs, compute_uv=False)
+            max_lambda[ii, jj] = singular_values.max()
+            min_lambda[ii, jj] = singular_values.min()
+            sum_lambda[ii, jj] = (singular_values**2).sum()
+
+    this = max_lambda.mean()
+
+    plt.figure()
+    image = plt.imshow(max_lambda)
+    plt.colorbar(image)
+    plt.title(f'max lambda; mean: {this:0.4}')
+    plt.xlabel('Realization')
+    plt.ylabel('Realization')
+    plt.show(block=False)
 
+    this = min_lambda.mean()
 
-def correlation_matern(rho, rho0, nu=2.5):
-    rho1 = np.sqrt(2 * nu) * np.abs(rho) / rho0
-    zero_indices = np.where(rho1 == 0)[0]
-    c = (rho1 ** nu 
-         * sp.special.kv(nu, rho1) 
-         / sp.special.gamma(nu) 
-         / 2.0 ** (nu - 1))
-    c[zero_indices] = 1.0
-    return c
+    plt.figure()
+    image = plt.imshow(min_lambda)
+    plt.colorbar(image)
+    plt.title(f'min lambda; mean: {this:0.4}')
+    plt.xlabel('Realization')
+    plt.ylabel('Realization')
+    plt.show(block=False)
 
+    this = sum_lambda.mean()
 
-def correlation_exp(rho, rho0, dummy):
-    c = np.exp(-np.abs(rho/rho0))
-    return c
+    plt.figure()
+    image = plt.imshow(sum_lambda)
+    plt.colorbar(image)
+    plt.title(f'sum lambda; mean: {this:0.4}')
+    plt.xlabel('Realization')
+    plt.ylabel('Realization')
+    plt.show(block=False)
 
 
-def correlation_sqd_exp(rho, rho0, dummy):
-    c = np.exp(-(rho**2 / (2 * rho0**2)))
-    return c
+    plt.show()
 
 
-def make_correlation_matrix(rho, rho0, correlation, nu=None):
-    Nx = rho.size
-    cor_vec = correlation(rho, rho0, nu)                                                                                                                                                                                                                                                                        
-    C = np.zeros([Nx, Nx])                                                                                                                                                                                                                                                                                          
-    cor_vec = np.concatenate([cor_vec[:0:-1], cor_vec])                                                                                                                                                                                          
-    for i in range(Nx):
-        C[i] = cor_vec[Nx-1 - i:2 * Nx - 1 - i]
-    return C
-
-
-# # Check matern against exp
-
-# In[6]:
-
-
-rho = np.arange(10)
-rho0 = 10
-nu = .5
-
-
-# In[7]:
-
-
-print(nu)
-correlation_matern(rho, rho0, nu)
-
-
-# In[8]:
-
-
-correlation_exp(rho, rho0, nu)
-
-
-# # Check matern agains sqd exp
-
-# In[9]:
-
-
-rho = np.arange(10)
-rho0 = 10
-nu = 150
-
-
-# In[10]:
-
-
-print(nu)
-correlation_matern(rho, rho0, nu)
-
-
-# In[11]:
-
-
-correlation_sqd_exp(rho, rho0, nu)
-
-
-# # Correlation matrix for a ring
-
-# In[12]:
-
-
-n = 100
-rho0 = 20
-rho = np.arange(n, dtype=float)
-rho = np.minimum(rho % n, (n - rho) % n)
-
-P = make_correlation_matrix(rho, rho0, correlation_sqd_exp)
-
-plt.figure()
-im = plt.imshow(P)
-plt.colorbar(im)
-plt.title('Covariance matrix for a ring')
-
-
-# In[13]:
-
-
-D, E = sp.linalg.eigh(P)
-D = D.clip(min=0)
-D = D[::-1]
-E = E[:, ::-1]
-
-
-# In[14]:
-
-
-plt.figure()
-plt.semilogy(D)
-
-
-# In[15]:
-
-
-sqrtP = E @ np.diag(np.sqrt(D)) @ E.T
-
-
-# In[16]:
-
-
-plt.figure()
-im = plt.imshow(sqrtP@sqrtP)
-plt.colorbar(im)
-
-
-# # Check ensemble est. of covariance
-
-# In[17]:
-
-
-n = 100
-Ne = 100
-rho0 = 0.1
-Nrealizations = 200
-NeigSubspace = 5
-nu = 3/2
-rho = np.arange(n)/n
-
-P = make_correlation_matrix(rho, rho0, correlation_matern, nu=nu)
-
-D, E = sp.linalg.eigh(P)
-D = D.clip(min=0)
-D = D[::-1]
-E = E[:, ::-1]
-sqrt_P = E @ np.sqrt(P) @ E.T
-E_save = np.zeros([n, NeigSubspace, Nrealizations])
-D_save = np.zeros([NeigSubspace, Nrealizations])
-
-
-# In[18]:
-
-
-for ii in range(Nrealizations):
-    X = sqrt_P @ np.random.randn(n, Ne)
-    X = X - np.repeat(X.mean(axis=1)[:, None], Ne, axis=1)
-    X = X / np.sqrt(Ne - 1)
-    P_hat = X @ X.T
-    D_save[:, ii], E_save[:, :, ii] = sp.linalg.eigh(
-        P_hat, eigvals=((n - NeigSubspace), n - 1))
-
-
-# In[19]:
-
-
-max_lambda = np.zeros([Nrealizations, Nrealizations])
-min_lambda = max_lambda.copy()
-sum_lambda = max_lambda.copy()
-for ii in range(Nrealizations):
-    for jj in range(Nrealizations):
-        IPs = E_save[:, :, ii].T @ E_save[:, :, jj]
-        Lambda = sp.linalg.svd(IPs, compute_uv=False)
-        max_lambda[ii, jj] = Lambda.max()
-        min_lambda[ii, jj] = Lambda.min()
-        sum_lambda[ii, jj] = (Lambda**2).sum()
-
-
-# In[20]:
-
-
-this = max_lambda.mean()
-plt.figure()
-im = plt.imshow(max_lambda)
-plt.colorbar(im)
-plt.title(f'max lambda; mean: {this:0.4}')
-
-this = min_lambda.mean()
-plt.figure()
-im = plt.imshow(min_lambda)
-plt.colorbar(im)
-plt.title(f'min lambda; mean: {this:0.4}')
-
-this = sum_lambda.mean()
-plt.figure()
-im = plt.imshow(sum_lambda)
-plt.colorbar(im)
-plt.title(f'sum lambda; mean: {this:0.4}')
-
+if __name__ == '__main__':
+    main()
