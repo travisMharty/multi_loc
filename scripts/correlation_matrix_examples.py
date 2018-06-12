@@ -133,9 +133,7 @@ def main():
     plt.ylabel('Realization')
     plt.show(block=False)
 
-
     plt.show()
-
 
 if __name__ == '__main__':
     main()
