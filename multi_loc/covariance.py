@@ -133,7 +133,7 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     return Corr
 
 
-def correlation_sqrt(P, return_eig=False):
+def matrix_sqrt(P, return_eig=False):
     """
     Returns the symmetric matrix square root of P through eigendecomposition.
     Assumes that P is real symmetric and positive semi-definite. Eigenvalues
