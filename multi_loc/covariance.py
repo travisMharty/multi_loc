@@ -131,3 +131,46 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     for i in range(rho_size):
         Corr[i] = cor_vec[rho_size-1 - i:2 * rho_size - 1 - i]
     return Corr
+
+
+def correlation_sqrt(P, return_eig=False):
+    """
+    Returns the symmetric matrix square root of P through eigendecomposition.
+    Assumes that P is real symmetric and positive semi-definite. Eigenvalues
+    will be clipped at zero and real.
+
+    Parameters
+    ----------
+    P : array_like
+        A correlation matrix which is real symmetric and positive semi-definite.
+
+    return_eig : bool
+        If True will return both the matrix square root as well as the
+        eigendecomposition.
+
+    Returns
+    -------
+    P_sqrt : array_like
+        The symmetric square root of P where all eigenvalue square roots are
+        taken as positive.
+
+    eig_values : array_like
+        Vector containing eigenvalues of P in descending order.
+
+    eig_vector : array_like
+        Matrix containing the eigenvectors of P corresponding to eig_values.
+    """
+
+    eig_val, eig_vec = sp.linalg.eigh(cov_P)
+    eig_val = eig_val.clip(min=0)
+    eig_val = eig_val[::-1]
+    eig_vec = eig_vec[:, ::-1]
+
+    sqrt_P = eig_vec @ np.diag(np.sqrt(eig_val)) @ eig_vec.T
+
+    if return_eig:
+        to_return  = (sqrt_P, eig_val, eig_vec)
+    else:
+        to_return = sqrt_P
+
+    return to_return
