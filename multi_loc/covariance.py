@@ -133,44 +133,210 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     return Corr
 
 
-def matrix_sqrt(P, return_eig=False):
+def eig_decomp(C):
     """
-    Returns the symmetric matrix square root of P through eigendecomposition.
-    Assumes that P is real symmetric and positive semi-definite. Eigenvalues
+    Returns eigenvalues and eigenvectors of C. Assumes that C is real symmetric
+    and positive semi-definite. Eigenvalues will be clipped at zero and real.
+
+    Parameters
+    ----------
+    C : array_like
+        A  matrix which is real symmetric and positive semi-definite.
+
+    Returns
+    -------
+    eig_values : array_like
+        Vector containing eigenvalues of C in descending order.
+
+    eig_vector : array_like
+        Matrix containing the eigenvectors of C corresponding to eig_values.
+
+    """
+    eig_val, eig_vec = sp.linalg.eigh(C)
+    eig_val = eig_val.clip(min=0)
+    eig_val = eig_val[::-1]
+    eig_vec = eig_vec[:, ::-1]
+    return eig_val, eig_vec
+
+def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
+    """
+    Returns the symmetric matrix square root of C through eigendecomposition.
+    Assumes that C is real symmetric and positive semi-definite. Eigenvalues
     will be clipped at zero and real.
 
     Parameters
     ----------
-    P : array_like
+    C : array_like
         A correlation matrix which is real symmetric and positive semi-definite.
+        Does not need to be provided if eig_val and eig_vec are provided.
+
+    eig_val : array_like
+        Eigenvalues of matrix to be square rooted. Should be in descending
+        order, and non-negative real. Will be calculated if not provided.
+
+    eig_vec : array_like
+        Eigenvectors of matrix to be square rooted. Should correspond to
+        eig_val. Will be calculated if not provided.
 
     return_eig : bool
         If True will return both the matrix square root as well as the
-        eigendecomposition.
+        eigendecomposition of C.
 
     Returns
     -------
-    P_sqrt : array_like
-        The symmetric square root of P where all eigenvalue square roots are
+    C_sqrt : array_like
+        The symmetric square root of C where all eigenvalue square roots are
         taken as positive.
 
     eig_values : array_like
-        Vector containing eigenvalues of P in descending order.
+        Vector containing eigenvalues of C in descending order.
 
     eig_vector : array_like
-        Matrix containing the eigenvectors of P corresponding to eig_values.
+        Matrix containing the eigenvectors of C corresponding to eig_values.
     """
 
-    eig_val, eig_vec = sp.linalg.eigh(cov_P)
-    eig_val = eig_val.clip(min=0)
-    eig_val = eig_val[::-1]
-    eig_vec = eig_vec[:, ::-1]
+    calc_eig = (eig_val is None) or (eig_vec is None)
+    if calc_eig:
+        eig_val, eig_vec = eig_decomp(C)
 
-    sqrt_P = eig_vec @ np.diag(np.sqrt(eig_val)) @ eig_vec.T
+    C_sqrt = eig_vec @ np.diag(np.sqrt(eig_val)) @ eig_vec.T
 
     if return_eig:
-        to_return  = (sqrt_P, eig_val, eig_vec)
+        to_return  = (C_sqrt, eig_val, eig_vec)
     else:
-        to_return = sqrt_P
+        to_return = C_sqrt
 
     return to_return
+
+
+def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
+    """
+    Returns the inverse or pseudo inverse of C through eigendecomposition.
+    Assumes that C is real symmetric and positive semi-definite. Eigenvalues
+    will be clipped at zero and real.
+
+    Parameters
+    ----------
+    C : array_like
+        A correlation matrix which is real symmetric and positive semi-definite.
+        Does not need to be provided if eig_val and eig_vec are provided.
+
+    eig_val : array_like
+        Eigenvalues of matrix to be inverted. Should be in descending order, and
+        non-negative real. Will be calculated if not provided.
+
+    eig_vec : array_like
+        Eigenvectors of matrix to be inverted. Should correspond to eig_val.
+        Will be calculated if not provided.
+
+    return_eig : bool
+        If True will return both the matrix inverse as well as the
+        eigendecomposition of C.
+
+    Returns
+    -------
+    C_inv : array_like
+        The inverse of matrix C.
+
+    eig_values : array_like
+        Vector containing eigenvalues of C in descending order.
+
+    eig_vector : array_like
+        Matrix containing the eigenvectors of C corresponding to eig_values.
+    """
+
+    calc_eig = (eig_val is None) or (eig_vec is None)
+    if calc_eig:
+        eig_val, eig_vec = eig_decomp(C)
+
+    eig_val_inv = eig_val.copy()
+    eig_val_inv[eig_val != 0] = 1/eig_val[eig_val != 0]
+
+    C_inv = eig_vec @ np.diag(eig_val_inv) @ eig_vec.T
+
+    if return_eig:
+        to_return  = (C_inv, eig_val, eig_vec)
+    else:
+        to_return = C_inv
+
+    return to_return
+
+
+def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
+    """
+    Returns the inverse or pseudo inverse of the square root of C through
+    eigendecomposition. Assumes that C is real symmetric and positive
+    semi-definite. Eigenvalues will be clipped at zero and real.
+
+    Parameters
+    ----------
+    C : array_like
+        A correlation matrix which is real symmetric and positive semi-definite.
+        Does not need to be provided if eig_val and eig_vec are provided.
+
+    eig_val : array_like
+        Eigenvalues of matrix to be square rooted and inverted. Should be in
+        descending order, and non-negative real. Will be calculated if not
+        provided.
+
+    eig_vec : array_like
+        Eigenvectors of matrix to be square rooted and inverted. Should
+        correspond to eig_val. Will be calculated if not provided.
+
+    return_eig : bool
+        If True will return both the matrix square root as well as the
+        eigendecomposition of C.
+
+    Returns
+    -------
+    C_sqrt_inv : array_like
+        The inverse of the square root of the matrix C.
+
+    eig_values : array_like
+        Vector containing eigenvalues of C in descending order.
+
+    eig_vector : array_like
+        Matrix containing the eigenvectors of C corresponding to eig_values.
+    """
+
+    calc_eig = (eig_val is None) or (eig_vec is None)
+    if calc_eig:
+        eig_val, eig_vec = eig_decomp(C)
+    eig_val_sqrt = np.sqrt(eig_val)
+
+    C_sqrt_inv = matrix_inv(eig_val=eig_val_sqrt, eig_vec=eig_vec)
+
+    if return_eig:
+        to_return  = (C_sqrt_inv, eig_val, eig_vec)
+    else:
+        to_return = C_sqrt_inv
+
+    return to_return
+
+
+def generate_ensemble(mu, P_sqrt, ens_size):
+    """
+    Return ensemble drawn from N(mu, P).
+
+    Parameters
+    ----------
+    mu : array_like
+        Mean of the returned ensemble samples. P.shape must equal
+        (mu.size, mu.size).
+
+    P_sqrt : array_like
+        Square root of the desired covariance of the ensemble samples.
+
+    ens_size : scalar
+        Number of ensemble members to return.
+
+    Returns
+    ------
+    ens : array_like
+        Ensemble of samples drawn from N(mu, P) of size m x n where m is the
+        dimension of the state space and m is ens_size.
+    """
+    dimension = mu.size
+    ens = mu + P_sqrt @ np.random.randn(dimension, ens_size)
+
+    return ens
