@@ -31,7 +31,7 @@ def correlation_matern(rho, rho0, nu=2.5):
         Correlation of different positions whose distances were given by rho.
         Same shape as rho.
     """
-    rho1 = np.sqrt(2.0OB * nu) * np.abs(rho) / rho0
+    rho1 = np.sqrt(2.0 * nu) * np.abs(rho) / rho0
     zero_indices = np.where(rho1 == 0)[0]
     corr = (rho1 ** nu
             * sp.special.kv(nu, rho1)
@@ -111,11 +111,11 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
         Characteristic distance.
 
     correlation_fun : function
-        Correlation function such that correlation_fun(rho, rho0, nu) returns the
-        desired correlation for distances rho.
+        Correlation function such that correlation_fun(rho, rho0, nu) returns
+        the desired correlation for distances rho.
 
     nu : Scalar
-        Matern smootheness parameter. Should be None is correlation is not
+        Matern smootheness parameter. Should be None if correlation is not
         correlation_matern.
 
     Returns
@@ -126,12 +126,12 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
         (n, n) = rho.shape.
     """
     rho_size = rho.size
-    cor_vec = correlation_fun(rho, rho0, nu)
+    corr_vec = correlation_fun(rho, rho0, nu)
     print(rho0)
     Corr = np.zeros([rho_size, rho_size])
-    cor_vec = np.concatenate([cor_vec[:0:-1], cor_vec])
+    corr_vec = np.concatenate([corr_vec[:0:-1], corr_vec])
     for i in range(rho_size):
-        Corr[i] = cor_vec[rho_size-1 - i:2 * rho_size - 1 - i]
+        Corr[i] = corr_vec[rho_size-1 - i:2 * rho_size - 1 - i]
     return Corr
 
 
@@ -155,7 +155,6 @@ def eig_decomp(C):
 
     """
     eig_val, eig_vec = sp.linalg.eigh(C)
-    # eig_val = eig_val.clip(min=0)
     eig_val = eig_val[::-1]
     eig_vec = eig_vec[:, ::-1]
     return eig_val, eig_vec
@@ -163,8 +162,7 @@ def eig_decomp(C):
 def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
     Returns the symmetric matrix square root of C through eigendecomposition.
-    Assumes that C is real symmetric and positive semi-definite. Eigenvalues
-    will be clipped at zero and real.
+    Assumes that C is real symmetric and positive semi-definite.
 
     Parameters
     ----------
@@ -174,7 +172,7 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
 
     eig_val : array_like
         Eigenvalues of matrix to be square rooted. Should be in descending
-        order, and non-negative real. Will be calculated if not provided.
+        order. Will be calculated if not provided.
 
     eig_vec : array_like
         Eigenvectors of matrix to be square rooted. Should correspond to
@@ -213,8 +211,7 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
 def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
     Returns the inverse or pseudo inverse of C through eigendecomposition.
-    Assumes that C is real symmetric and positive semi-definite. Eigenvalues
-    will be clipped at zero and real.
+    Assumes that C is real symmetric and positive semi-definite.
 
     Parameters
     ----------
@@ -223,8 +220,8 @@ def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
         Does not need to be provided if eig_val and eig_vec are provided.
 
     eig_val : array_like
-        Eigenvalues of matrix to be inverted. Should be in descending order, and
-        non-negative real. Will be calculated if not provided.
+        Eigenvalues of matrix to be inverted. Should be in descending order.
+        Will be calculated if not provided.
 
     eig_vec : array_like
         Eigenvectors of matrix to be inverted. Should correspond to eig_val.
@@ -267,7 +264,7 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
     Returns the inverse or pseudo inverse of the square root of C through
     eigendecomposition. Assumes that C is real symmetric and positive
-    semi-definite. Eigenvalues will be clipped at zero and real.
+    semi-definite.
 
     Parameters
     ----------
@@ -342,3 +339,63 @@ def generate_ensemble(mu, P_sqrt, ens_size):
     ens = mu + P_sqrt @ np.random.randn(dimension, ens_size)
 
     return ens
+
+
+def generate_circulant(rho, rho0, correlation_fun, return_eig=True,
+                       return_Corr=False):
+    """
+    Return correlation matrix for distances rho, using the correlaiton_function
+    and parameters rho0 and nu. Assumes that rho is such that the produced
+    correlation matrix will be a circulant.
+
+    Parameters
+    ----------
+    rho : array_like
+        Distances of first position to all others.
+
+    rho0 : Scalar
+        Characteristic distance.
+
+    correlation_fun : function
+        Correlation function such that correlation_fun(rho, rho0, nu) returns
+        the desired correlation for distances rho.
+
+    nu : Scalar
+        Matern smootheness parameter. Should be None if correlation is not
+        correlation_matern.
+
+    return_eig : bool
+        If True then will return eig_val and eig_vec.
+
+    return_Corr : bool
+        If True the will return Coor matrix.
+
+    Returns
+    -------
+    eig_val : array_like
+        Eigenvalues of the circulant correlation matrix corresponding to
+        correlation_fun(rho, rho0, nu). Only returns if retrun_eig is True.
+
+    eig_vec : array_like
+        Eigenvectors of the circulant correlation matrix corresponding to
+        correlation_fun(rho, rho0, nu). Only returns if return_eig is True.
+
+    Corr : array_like
+        Circulant correlation matrix corresponding to eig_val and eig_vec.
+        Only returns if return_Corr is True.
+    """
+    rho_size = rho.size
+    corr_vec = correlation_fun(rho, rho0, nu)
+    eig_val = np.fft.fft(corr_vec)
+    eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
+    if return_Corr:
+        Corr = eig_vec @ np.diag(eig_val) @ eig_vec.conj().T
+    to_return = None
+    if return_Corr and return_eig:
+        to_return = (eig_val, eig_vec, Corr)
+    elif return_Corr:
+        to_return = Corr
+    elif return_eig:
+        to_return = (eig_val, eig_vec)
+
+    return to_return
