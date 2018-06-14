@@ -197,7 +197,7 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
     if calc_eig:
         eig_val, eig_vec = eig_decomp(C)
 
-    C_sqrt = eig_vec @ np.diag(np.sqrt(eig_val + 0j)) @ eig_vec.T
+    C_sqrt = eig_vec @ np.diag(np.sqrt(eig_val + 0j)) @ eig_vec.conj().T
     if return_eig:
         to_return  = (C_sqrt, eig_val, eig_vec)
     else:
@@ -248,7 +248,7 @@ def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     eig_val_inv = eig_val.copy()
     eig_val_inv[eig_val != 0] = 1/eig_val[eig_val != 0]
 
-    C_inv = eig_vec @ np.diag(eig_val_inv) @ eig_vec.T
+    C_inv = eig_vec @ np.diag(eig_val_inv) @ eig_vec.conj().T
 
     if return_eig:
         to_return  = (C_inv, eig_val, eig_vec)
