@@ -31,7 +31,7 @@ def correlation_matern(rho, rho0, nu=2.5):
         Correlation of different positions whose distances were given by rho.
         Same shape as rho.
     """
-    rho1 = np.sqrt(2 * nu) * np.abs(rho) / rho0
+    rho1 = np.sqrt(2.0OB * nu) * np.abs(rho) / rho0
     zero_indices = np.where(rho1 == 0)[0]
     corr = (rho1 ** nu
             * sp.special.kv(nu, rho1)
@@ -92,7 +92,8 @@ def correlation_sqd_exp(rho, rho0, nu=None):
     """
     if nu is not None:
         print("nu is unused")
-    corr = np.exp(-(rho**2 / (2 * rho0**2)))
+    print(rho0)
+    corr = np.exp(-(rho**2 / (2.0 * rho0**2)))
     return corr
 
 
@@ -126,6 +127,7 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     """
     rho_size = rho.size
     cor_vec = correlation_fun(rho, rho0, nu)
+    print(rho0)
     Corr = np.zeros([rho_size, rho_size])
     cor_vec = np.concatenate([cor_vec[:0:-1], cor_vec])
     for i in range(rho_size):
@@ -153,7 +155,7 @@ def eig_decomp(C):
 
     """
     eig_val, eig_vec = sp.linalg.eigh(C)
-    eig_val = eig_val.clip(min=0)
+    # eig_val = eig_val.clip(min=0)
     eig_val = eig_val[::-1]
     eig_vec = eig_vec[:, ::-1]
     return eig_val, eig_vec
@@ -199,8 +201,7 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
     if calc_eig:
         eig_val, eig_vec = eig_decomp(C)
 
-    C_sqrt = eig_vec @ np.diag(np.sqrt(eig_val)) @ eig_vec.T
-
+    C_sqrt = eig_vec @ np.diag(np.sqrt(eig_val + 0j)) @ eig_vec.T
     if return_eig:
         to_return  = (C_sqrt, eig_val, eig_vec)
     else:
@@ -302,7 +303,7 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     calc_eig = (eig_val is None) or (eig_vec is None)
     if calc_eig:
         eig_val, eig_vec = eig_decomp(C)
-    eig_val_sqrt = np.sqrt(eig_val)
+    eig_val_sqrt = np.sqrt(eig_val + 0j)
 
     C_sqrt_inv = matrix_inv(eig_val=eig_val_sqrt, eig_vec=eig_vec)
 
@@ -337,6 +338,7 @@ def generate_ensemble(mu, P_sqrt, ens_size):
         dimension of the state space and m is ens_size.
     """
     dimension = mu.size
+    mu = mu[:, None]
     ens = mu + P_sqrt @ np.random.randn(dimension, ens_size)
 
     return ens
