@@ -386,6 +386,9 @@ def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
     corr_vec = correlation_fun(rho, rho0, nu)
     eig_val = np.fft.fft(corr_vec)
     eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
+    sort_index = np.argsort(eig_val)[::-1]
+    eig_val = eig_val[sort_index]
+    eig_vec = eig_vec[:, sort_index]
 
     if return_Corr:
         Corr = eig_vec @ np.diag(eig_val) @ eig_vec.conj().T
