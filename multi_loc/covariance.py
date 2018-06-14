@@ -92,7 +92,6 @@ def correlation_sqd_exp(rho, rho0, nu=None):
     """
     if nu is not None:
         print("nu is unused")
-    print(rho0)
     corr = np.exp(-(rho**2 / (2.0 * rho0**2)))
     return corr
 
@@ -127,7 +126,6 @@ def make_correlation_matrix(rho, rho0, correlation_fun, nu=None):
     """
     rho_size = rho.size
     corr_vec = correlation_fun(rho, rho0, nu)
-    print(rho0)
     Corr = np.zeros([rho_size, rho_size])
     corr_vec = np.concatenate([corr_vec[:0:-1], corr_vec])
     for i in range(rho_size):
@@ -341,7 +339,7 @@ def generate_ensemble(mu, P_sqrt, ens_size):
     return ens
 
 
-def generate_circulant(rho, rho0, correlation_fun, return_eig=True,
+def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
                        return_Corr=False):
     """
     Return correlation matrix for distances rho, using the correlaiton_function
@@ -388,6 +386,7 @@ def generate_circulant(rho, rho0, correlation_fun, return_eig=True,
     corr_vec = correlation_fun(rho, rho0, nu)
     eig_val = np.fft.fft(corr_vec)
     eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
+
     if return_Corr:
         Corr = eig_vec @ np.diag(eig_val) @ eig_vec.conj().T
     to_return = None
