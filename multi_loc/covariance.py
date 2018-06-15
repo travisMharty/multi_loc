@@ -359,11 +359,11 @@ def generate_ensemble(ens_size, mu, P_sqrt=None, eig_val=None, eig_vec=None):
 
 
 def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
-                       return_Corr=False):
+                       return_Corr=False, eig_tol=None):
     """
     Return correlation matrix for distances rho, using the correlaiton_function
     and parameters rho0 and nu. Assumes that rho is such that the produced
-    correlation matrix will be a circulant.
+    correlation matrix will be a circulant. adf
 
     Parameters
     ----------
@@ -404,9 +404,12 @@ def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
     rho_size = rho.size
     corr_vec = correlation_fun(rho, rho0, nu)
     eig_val = np.fft.fft(corr_vec)
-    eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
     sort_index = np.argsort(eig_val)[::-1]
     eig_val = eig_val[sort_index]
+    # Need to set this up in the future to only calculate the needed
+    # eigenvectors based on some tolerance.
+
+    eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
     eig_vec = eig_vec[:, sort_index]
 
     if return_Corr:
