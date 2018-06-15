@@ -420,3 +420,125 @@ def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
         to_return = (eig_val, eig_vec)
 
     return to_return
+
+
+def approx(eig_val, tol):
+    """
+    Returns the number of eigenvalues needed to meet some tolerance.
+
+    Parameters
+    ----------
+    eig_val : array_like
+        Eigenvalues  to be analyzed. Should be non-negative real and in
+        descending order.
+
+    tol : scalar
+        The tolerance which must be reached in terms of the squared sum of the
+        eigenvalues.
+
+    Returns
+    -------
+    eig_num : scalar
+        The number of eigenvalues which should be used to meet the tolerance.
+    """
+    eig_num = 1
+    eig_tol = (1 - tol) * (eig_val**2).sum()
+    eig_sum = 0
+    cond = True
+    while cond:
+        eig_sum += eig_val[eig_num-1]**2
+        # print(eig_tol)
+        if eig_sum > eig_tol or eig_num == eig_val.size:
+            cond = False
+        else:
+            eig_num += 1
+    return eig_num
+
+
+def get_approx_eig(Corr, tol):
+    """
+    Return eig_val and eig_vec which approximates Corr.
+
+    Parameters
+    ----------
+    Corr : array_like
+        The correlation matrix to be approximated.
+
+    tol : scalar
+        The tolerance which will be met in terms of the squared sum of the
+        eigenvalues of Corr.
+
+    Returns
+    -------
+    eig_val : array_like
+        Eigenvalues that approximate Corr.
+
+    eig_vec : array_like
+        Eigenvectors that approximate Corr.
+    """
+    eig_val, eig_vec = np.linalg.eigh(Corr)
+    eig_val = eig_val[::-1]
+    eig_vec = eig_vec[:, ::-1]
+    eig_num = approx(eig_val, tol)
+    eig_val = eig_val[:eig_num]
+    eig_vec = eig_vec[:, :eig_num]
+    return eig_val, eig_vec
+
+
+def eig_2d_covariance(rho_x, rho_y, rho0_x, rho0_y, tol,
+                      correlation_fun, nu=None):
+    """
+    Return correlation matrix for distances rho_x and rho_y, using the
+    correlaiton_function and parameters rho0_x, rho0_y and nu.
+
+    Parameters
+    ----------
+    rho_x : array_like
+        Distances of first position to all others for x.
+
+    rho_y : array_like
+        Distances of first position to all others for y.
+
+    rho0_x : Scalar
+        Characteristic distance for x.
+
+    rho0_y : Scalar
+        Characteristic distance for y.
+
+    tol : Scalar
+        Tolerance which will be used to reduce the number of eigenvalues Corr_x,
+        Corr_y, and Corr in terms of the squared sum of the eigenvalues.
+
+    correlation_fun : function
+        Correlation function such that correlation_fun(rho, rho0, nu) returns
+        the desired correlation for distances rho.
+
+    nu : Scalar
+        Matern smootheness parameter. Should be None if correlation is not
+        correlation_matern.
+
+    Returns
+    -------
+    Corr : array_like
+        Correlation matrix based on the distances defined by rho and
+        correlation_fun with parameters rho0 and nu. If n = rho.size, then
+        (n, n) = rho.shape.
+    """
+    Corr_x = make_correlation_matrix(
+        rho_x, rho0_x, correlation_fun, nu=nu)
+    Corr_y = make_correlation_matrix(
+        rho_y, rho0_y, correlation_fun, nu=nu)
+
+    eig_val_x, eig_vec_x = get_approx_eig(Corr_x, tol)
+    eig_val_y, eig_vec_y = get_approx_eig(Corr_y, tol)
+    eig_val = np.kron(eig_val_y, eig_val_x)
+    eig_vec = np.kron(eig_vec_y, eig_vec_x)
+
+    sorted_indices = np.argsort(eig_val)
+    sorted_indices = sorted_indices[::-1]
+    eig_val = eig_val[sorted_indices]
+    eig_vec = eig_vec[:, sorted_indices]
+    eig_num = approx(eig_val, tol)
+    eig_val = eig_val[:eig_num]
+    eig_vec = eig_vec[:, :eig_num]
+    return eig_val, eig_vec
