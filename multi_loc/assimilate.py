@@ -1,4 +1,5 @@
 import numpy as np
+from multi_loc import covariance
 
 
 def generate_ensemble(ens_size, mu, P_sqrt=None, eig_val=None, eig_vec=None):
@@ -47,3 +48,28 @@ def generate_ensemble(ens_size, mu, P_sqrt=None, eig_val=None, eig_vec=None):
         ens = mu + P_sqrt @ np.random.randn(dimension, ens_size)
 
     return ens
+
+
+def is_diag(X, atol=1e-16, rtol=1e-16):
+    """
+    Returns True if matrix X is diagonal to a specific tolerance.
+
+    Parameters
+    ----------
+    X : array_like
+        The Matrix which will be tested for being diagonal.
+
+    atol : scalar
+        The absolute tolerance which will be used in np.allclose().
+
+    rtol : scalar
+        The relative tolerance which will be used in np.allclose().
+
+    Returns
+    -------
+    diag_bool : bool
+        The Boolean which will be True is X is diagonal and false otherwise.
+    """
+    diag_bool = np.allclose(X, np.diag(np.diag(X)),
+                            atol=atol, rtol=rtol)
+    return diag_bool
