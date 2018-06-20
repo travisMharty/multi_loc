@@ -110,8 +110,10 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
     if eig_condition:
         C_sqrt, eig_val, eig_vec = covariance.matrix_sqrt(C=C,
                                                           return_eig=True)
+        C_sqrt = C_sqrt.real
         C_inv_sqrt = covariance.matrix_sqrt_inv(eig_val=eig_val,
                                                 eig_vec=eig_vec)
+        C_sqrt = C_sqrt.real
     elif C_diag:
         diag = np.diag(C)
         C_sqrt = np.sqrt(diag)
@@ -121,8 +123,10 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
     else:
         C_sqrt = covariance.matrix_sqrt(eig_val=eig_val,
                                         eig_vec=eig_vec)
+        C_sqrt = C_sqrt.real
         C_inv_sqrt = covariance.matrix_sqrt_inv(eig_val=eig_val,
                                                 eig_vec=eig_vec)
+        C_inv_sqrt = C_inv_sqrt.real
     return C_sqrt, C_inv_sqrt
 
 
