@@ -229,3 +229,10 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
         return to_return
     else:
         return to_return
+
+
+def transformed_EnKF(ens_num, H, eig_val_p=None, eig_vec_p=None, P=None,
+                     eig_val_r=None, eig_vec_r=None, R=None):
+    """
+
+    """
