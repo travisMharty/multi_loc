@@ -159,7 +159,7 @@ def eig_decomp(C):
 
 def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
-    Returns the symmetric matrix square root of C through eigendecomposition.
+    Returns the symmetric matrix square root of C through eigen decomposition.
     Assumes that C is real symmetric and positive semi-definite.
 
     Parameters
@@ -178,7 +178,7 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
 
     return_eig : bool
         If True will return both the matrix square root as well as the
-        eigendecomposition of C.
+        eigen decomposition of C.
 
     Returns
     -------
@@ -208,9 +208,8 @@ def matrix_sqrt(C=None, eig_val=None, eig_vec=None, return_eig=False):
 
 def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
-    Returns the inverse or pseudo inverse of C through eigendecomposition.
+    Returns the inverse or pseudo inverse of C through eigen decomposition.
     Assumes that C is real symmetric and positive semi-definite.
-
     Parameters
     ----------
     C : array_like
@@ -227,7 +226,7 @@ def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
 
     return_eig : bool
         If True will return both the matrix inverse as well as the
-        eigendecomposition of C.
+        eigen decomposition of C.
 
     Returns
     -------
@@ -261,7 +260,7 @@ def matrix_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
 def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     """
     Returns the inverse or pseudo inverse of the square root of C through
-    eigendecomposition. Assumes that C is real symmetric and positive
+    eigen decomposition. Assumes that C is real symmetric and positive
     semi-definite.
 
     Parameters
@@ -281,7 +280,7 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
 
     return_eig : bool
         If True will return both the matrix square root as well as the
-        eigendecomposition of C.
+        eigen decomposition of C.
 
     Returns
     -------
