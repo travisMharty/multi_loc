@@ -131,7 +131,8 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
 
 
 def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
-                            eig_val_r=None, eig_vec_r=None, R=None):
+                            eig_val_r=None, eig_vec_r=None, R=None,
+                            return_Ts=False):
     """
     Return the matrices needed to perform the optimal localization. If P(R) is
     diagonal, then eig_val_p(eig_val_r) and eig_vec_p(eig_vec_r) will not be
@@ -204,4 +205,15 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
         axis=1)
     to_return = [P_sqrt, P_inv_sqrt, R_sqrt, R_inv_sqrt,
                  U, S, VT]
-    return to_return
+    if return_Ts:
+        Tx = VT @ P_inv_sqrt
+        Tx_inv = P_sqrt @ VT.conj().T
+        Ty = U.cong().T @ R_inv_sqrt
+        Ty_inv = R_sqrt @ U
+        to_return.append(Tx)
+        to_return.append(Tx_inv)
+        to_return.append(Ty)
+        to_return.append(Ty_inv)
+        return to_return
+    else:
+        return to_return
