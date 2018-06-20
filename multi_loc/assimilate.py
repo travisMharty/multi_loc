@@ -200,7 +200,8 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
     U, S, VT = sp.linalg.svd(R_inv_sqrt @ H @ P_sqrt)
     S = np.diag(S)
     S = np.concatenate(
-        [S, np.zeros([y_size, dimension - y_size])])
+        [S, np.zeros([y_size, dimension - y_size])],
+        axis=1)
     to_return = [P_sqrt, P_inv_sqrt, R_sqrt, R_inv_sqrt,
                  U, S, VT]
     return to_return
