@@ -113,7 +113,7 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
         C_sqrt = C_sqrt.real
         C_inv_sqrt = covariance.matrix_sqrt_inv(eig_val=eig_val,
                                                 eig_vec=eig_vec)
-        C_sqrt = C_sqrt.real
+        C_inv_sqrt = C_inv_sqrt.real
     elif C_diag:
         diag = np.diag(C)
         C_sqrt = np.sqrt(diag)
@@ -220,7 +220,7 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
     if return_Ts:
         Tx = VT @ P_inv_sqrt
         Tx_inv = P_sqrt @ VT.conj().T
-        Ty = U.cong().T @ R_inv_sqrt
+        Ty = U.conj().T @ R_inv_sqrt
         Ty_inv = R_sqrt @ U
         to_return.append(Tx)
         to_return.append(Tx_inv)
