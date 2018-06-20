@@ -118,6 +118,11 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
         C_inv_sqrt = 1/C_sqrt
         C_sqrt = np.diag(C_sqrt)
         C_inv_sqrt = np.diag(C_inv_sqrt)
+    else:
+        C_sqrt = covariance.matrix_sqrt(eig_val=eig_val,
+                                        eig_vec=eig_vec)
+        C_inv_sqrt = covariance.matrix_sqrt_inv(eig_val=eig_val,
+                                                eig_vec=eig_vec)
     return C_sqrt, C_inv_sqrt
 
 
