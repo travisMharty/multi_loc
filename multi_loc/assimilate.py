@@ -190,6 +190,18 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
 
     VT : ndarray
         The transpose of the right singular vectors of R_inv_sqrt @ H @ P_sqrt.
+
+    Tx : ndarray
+        Transformation to localized space for state space.
+
+    Tx_inv : ndarray
+        Inverse of Tx.
+
+    Ty : ndarray
+        Transformation to localized space for observation space.
+
+    Ty_inv : ndarray
+        Inverse of Ty.
     """
     dimension = H.shape[1]
     y_size = H.shape[0]
