@@ -309,31 +309,26 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     return to_return
 
 
-def return_waves(Nx, dx):
+def return_waves(Nx):
     """
     Returns wavenumbers corresponding to np.fft.fft of a function on a line of
-    length Nx and spacing dx.
+    length Nx.
 
     Parameters
     ----------
     Nx : scalar
-        Length of wavenumber vector.
-
-    dx : scalar
-        Step size of grid in physical space.
+        Length of Physical space (dx=1).
 
     Returns
     -------
     k : ndarray
-        The wave numbers which correspond to vector of length Nx and grid
-        size dx.
+        The wave numbers which correspond to vector of length Nx.
     """
-    domain_length = dx*Nx
     if Nx % 2 == 0:
         k = np.arange(-Nx/2, Nx/2)
     else:
         k = np.arange(-(Nx - 1)/2, (Nx - 1)/2 + 1)
-    k = np.fft.ifftshift(k)/domain_length
+    k = np.fft.ifftshift(k)/Nx
     return k
 
 
@@ -360,8 +355,8 @@ def fft_exp_1d(Nx, dx, rho0, nu=None):
         The fft of the 1D exponential correlation function. These are also the
         eigenvalues corresponding to the correlation matrix.
     """
-    k = return_waves(Nx, dx)
-    a = rho0
+    k = return_waves(Nx)
+    a = rho0/dx
     eig_val = (
         (2 * a) / (1 + (2 * np.pi * k * a)**2))
     return eig_val
@@ -390,8 +385,8 @@ def fft_sqd_exp_1d(Nx, dx, rho0, nu=None):
         The fft of the 1D squared exponential correlation function. These are
         also the eigenvalues corresponding to the correlation matrix.
     """
-    k = return_waves(Nx, dx)
-    a = 2 * rho0**2
+    k = return_waves(Nx)
+    a = 2 * (rho0/dx)**2
     eig_val = (np.sqrt(np.pi * a)
                * np.exp( - np.pi**2 * a * k**2))
     return eig_val
