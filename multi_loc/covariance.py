@@ -393,7 +393,7 @@ def fft_sqd_exp_1d(Nx, dx, rho0, nu=None):
 
 
 def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
-                       return_Corr=False, eig_tol=None):
+                       return_Corr=False, return_sort_ind=False):
     """
     Return correlation matrix for distances rho, using the correlaiton_function
     and parameters rho0 and nu. Assumes that rho is such that the produced
@@ -424,6 +424,9 @@ def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
     return_Corr : bool
         If True the will return Coor matrix.
 
+    return_sort_ind : bool
+        If True the sort index for the eigenvalues will be returned.
+
     Returns
     -------
     eig_val : array_like
@@ -437,6 +440,10 @@ def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
     Corr : array_like
         Circulant correlation matrix corresponding to eig_val and eig_vec.
         Only returns if return_Corr is True.
+
+    sort_index : ndarray
+        A vector of the indices which sort eig_val in order of largest to
+        smallest.
     """
     eig_val = correlation_fun(Nx, dx, rho0, nu)
     sort_index = np.argsort(eig_val)[::-1]
@@ -450,11 +457,14 @@ def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
         Corr = eig_vec @ np.diag(eig_val) @ eig_vec.conj().T
     to_return = None
     if return_Corr and return_eig:
-        to_return = (eig_val, eig_vec, Corr)
+        to_return = [eig_val, eig_vec, Corr]
     elif return_Corr:
-        to_return = Corr
+        to_return = [Corr]
     elif return_eig:
-        to_return = (eig_val, eig_vec)
+        to_return = [eig_val, eig_vec]
+
+    if return_sort_ind :
+        to_return.append(sort_index)
 
     return to_return
 
