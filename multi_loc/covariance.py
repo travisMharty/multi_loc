@@ -309,7 +309,98 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     return to_return
 
 
+def return_waves(rho):
+    Nx = rho.size
+    domain_length = (rho[1] - rho[0])*Nx
+    if Nx % 2 == 0:
+        k = np.arange(-Nx/2, Nx/2)
+    else:
+        k = np.arange(-(Nx - 1)/2, (Nx - 1)/2 + 1)
+    k = np.fft.ifftshift(k)/domain_length
+    return k
+
+
+def fft_exp_1d(rho, rho0, nu=None):
+    k = return_waves(rho)
+    a = rho0
+    eig_val = (
+        (2 * a) / (1 + (2 * np.pi * k * a)**2))
+    return eig_val
+
+
+def fft_sqd_exp_1d(rho, rho0, nu=None):
+    k = return_waves(rho)
+    a = 2 * rho0**2
+    eig_val = (np.sqrt(np.pi * a)
+               * np.exp( - np.pi**2 * a * k**2))
+    return eig_val
+
+
 def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
+                       return_Corr=False, eig_tol=None):
+    """
+    Return correlation matrix for distances rho, using the correlaiton_function
+    and parameters rho0 and nu. Assumes that rho is such that the produced
+    correlation matrix will be a circulant. adf
+
+    Parameters
+    ----------
+    rho : array_like
+        Distances of first position to all others.
+
+    rho0 : Scalar
+        Characteristic distance.
+
+    correlation_fun : function
+        Correlation function such that correlation_fun(rho, rho0, nu) returns
+        the desired correlation for distances rho.
+
+    nu : Scalar
+        Matern smootheness parameter. Should be None if correlation is not
+        correlation_matern.
+
+    return_eig : bool
+        If True then will return eig_val and eig_vec.
+
+    return_Corr : bool
+        If True the will return Coor matrix.
+
+    Returns
+    -------
+    eig_val : array_like
+        Eigenvalues of the circulant correlation matrix corresponding to
+        correlation_fun(rho, rho0, nu). Only returns if retrun_eig is True.
+
+    eig_vec : array_like
+        Eigenvectors of the circulant correlation matrix corresponding to
+        correlation_fun(rho, rho0, nu). Only returns if return_eig is True.
+
+    Corr : array_like
+        Circulant correlation matrix corresponding to eig_val and eig_vec.
+        Only returns if return_Corr is True.
+    """
+    rho_size = rho.size
+    eig_val = correlation_fun(rho, rho0, nu)
+    # Need to set this up in the future to only calculate the needed
+    # eigenvectors based on some tolerance.
+    sort_index = np.argsort(eig_val)[::-1]
+    eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
+    eig_vec = eig_vec[:, sort_index]
+
+    if return_Corr:
+        Corr = eig_vec @ np.diag(eig_val) @ eig_vec.conj().T
+    to_return = None
+    if return_Corr and return_eig:
+        to_return = (eig_val, eig_vec, Corr)
+    elif return_Corr:
+        to_return = Corr
+    elif return_eig:
+        to_return = (eig_val, eig_vec)
+
+    return to_return
+
+
+def generate_circulant_old(rho, rho0, correlation_fun, nu=None, return_eig=True,
                        return_Corr=False, eig_tol=None):
     """
     Return correlation matrix for distances rho, using the correlaiton_function
