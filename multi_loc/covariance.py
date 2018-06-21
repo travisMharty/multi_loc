@@ -309,9 +309,26 @@ def matrix_sqrt_inv(C=None, eig_val=None, eig_vec=None, return_eig=False):
     return to_return
 
 
-def return_waves(rho):
-    Nx = rho.size
-    domain_length = (rho[1] - rho[0])*Nx
+def return_waves(Nx, dx):
+    """
+    Returns wavenumbers corresponding to np.fft.fft of a function on a line of
+    length Nx and spacing dx.
+
+    Parameters
+    ----------
+    Nx : scalar
+        Length of wavenumber vector.
+
+    dx : scalar
+        Step size of grid in physical space.
+
+    Returns
+    -------
+    k : ndarray
+        The wave numbers which correspond to vector of length Nx and grid
+        size dx.
+    """
+    domain_length = dx*Nx
     if Nx % 2 == 0:
         k = np.arange(-Nx/2, Nx/2)
     else:
@@ -320,23 +337,67 @@ def return_waves(rho):
     return k
 
 
-def fft_exp_1d(rho, rho0, nu=None):
-    k = return_waves(rho)
+def fft_exp_1d(Nx, dx, rho0, nu=None):
+    """
+    Returns the fft of a exponential correlation function on a 1D periodic
+    domain of size Nx which has grid size dx and characteristic distance
+    rho0.
+
+    Parameters
+    ----------
+    Nx : scalar
+        The size of the grid over which the calculation will be made.
+
+    dx : scalar
+        The grid spacing in physical space.
+
+    rho0 : scalar
+        The characteristic length scale in physical space.
+
+    Returns
+    -------
+    eig_val : ndarray
+        The fft of the 1D exponential correlation function. These are also the
+        eigenvalues corresponding to the correlation matrix.
+    """
+    k = return_waves(Nx, dx)
     a = rho0
     eig_val = (
         (2 * a) / (1 + (2 * np.pi * k * a)**2))
     return eig_val
 
 
-def fft_sqd_exp_1d(rho, rho0, nu=None):
-    k = return_waves(rho)
+def fft_sqd_exp_1d(Nx, dx, rho0, nu=None):
+    """
+    Returns the fft of a squared exponential correlation function on a 1D
+    periodic domain of size Nx which has grid size dx and characteristic
+    distance rho0.
+
+    Parameters
+    ----------
+    Nx : scalar
+        The size of the grid over which the calculation will be made.
+
+    dx : scalar
+        The grid spacing in physical space.
+
+    rho0 : scalar
+        The characteristic length scale in physical space.
+
+    Returns
+    -------
+    eig_val : ndarray
+        The fft of the 1D squared exponential correlation function. These are
+        also the eigenvalues corresponding to the correlation matrix.
+    """
+    k = return_waves(Nx, dx)
     a = 2 * rho0**2
     eig_val = (np.sqrt(np.pi * a)
                * np.exp( - np.pi**2 * a * k**2))
     return eig_val
 
 
-def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
+def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
                        return_Corr=False, eig_tol=None):
     """
     Return correlation matrix for distances rho, using the correlaiton_function
@@ -345,8 +406,11 @@ def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
 
     Parameters
     ----------
-    rho : array_like
-        Distances of first position to all others.
+    Nx : scalar
+        The size of the grid covering the physical space.
+
+    dx : scalar
+        The grid spacing in physical space.
 
     rho0 : Scalar
         Characteristic distance.
@@ -379,12 +443,12 @@ def generate_circulant(rho, rho0, correlation_fun, nu=None, return_eig=True,
         Circulant correlation matrix corresponding to eig_val and eig_vec.
         Only returns if return_Corr is True.
     """
-    rho_size = rho.size
-    eig_val = correlation_fun(rho, rho0, nu)
+    eig_val = correlation_fun(Nx, dx, rho0, nu)
+    sort_index = np.argsort(eig_val)[::-1]
+    eig_val = eig_val[sort_index]
     # Need to set this up in the future to only calculate the needed
     # eigenvectors based on some tolerance.
-    sort_index = np.argsort(eig_val)[::-1]
-    eig_vec = np.fft.fft(np.eye(rho_size))/np.sqrt(rho_size)
+    eig_vec = np.fft.fft(np.eye(Nx))/np.sqrt(Nx)
     eig_vec = eig_vec[:, sort_index]
 
     if return_Corr:
