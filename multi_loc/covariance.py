@@ -328,7 +328,7 @@ def return_waves(Nx):
         k = np.arange(-Nx/2, Nx/2)
     else:
         k = np.arange(-(Nx - 1)/2, (Nx - 1)/2 + 1)
-    k = np.fft.ifftshift(k)/Nx
+    k = np.fft.ifftshift(k)
     return k
 
 
@@ -356,9 +356,11 @@ def fft_exp_1d(Nx, dx, rho0, nu=None):
         eigenvalues corresponding to the correlation matrix.
     """
     k = return_waves(Nx)
-    a = rho0/dx
+    k = k / (Nx * dx)
+    a = rho0
     eig_val = (
-        (2 * a) / (1 + (2 * np.pi * k * a)**2))
+        (2.0 * a) / (1.0 + (2.0 * np.pi * k * a)**2))
+    eig_val = eig_val/dx
     return eig_val
 
 
@@ -386,9 +388,11 @@ def fft_sqd_exp_1d(Nx, dx, rho0, nu=None):
         also the eigenvalues corresponding to the correlation matrix.
     """
     k = return_waves(Nx)
-    a = 2 * (rho0/dx)**2
+    k = k / (dx * Nx)
+    a = 2 * (rho0)**2
     eig_val = (np.sqrt(np.pi * a)
                * np.exp( - np.pi**2 * a * k**2))
+    eig_val = eig_val/dx
     return eig_val
 
 
