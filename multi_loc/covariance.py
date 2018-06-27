@@ -401,7 +401,7 @@ def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
     """
     Return correlation matrix for distances rho, using the correlaiton_function
     and parameters rho0 and nu. Assumes that rho is such that the produced
-    correlation matrix will be a circulant. adf
+    correlation matrix will be a circulant.
 
     Parameters
     ----------
