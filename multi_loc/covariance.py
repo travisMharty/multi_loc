@@ -324,10 +324,7 @@ def return_waves(Nx):
     k : ndarray
         The wave numbers which correspond to vector of length Nx.
     """
-    if Nx % 2 == 0:
-        k = np.arange(-Nx/2, Nx/2)
-    else:
-        k = np.arange(-(Nx - 1)/2, (Nx - 1)/2 + 1)
+    k = np.arange(Nx) - Nx/2
     k = np.fft.ifftshift(k)
     return k
 
