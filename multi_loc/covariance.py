@@ -452,6 +452,14 @@ def generate_circulant(Nx, dx, rho0, correlation_fun, nu=None, return_eig=True,
     # Need to set this up in the future to only calculate the needed
     # eigenvectors based on some tolerance.
     eig_vec = np.fft.fft(np.eye(Nx))/np.sqrt(Nx)
+    this_copy = eig_vec.copy()
+    eig_vec[:, 1:int(Nx/2)] = ((this_copy[:, 1:int(Nx/2)]
+                                + this_copy[:, :int(Nx/2):-1])
+                               /np.sqrt(2))
+    eig_vec[:, int(Nx/2) + 1:] = -((this_copy[:, int(Nx/2) - 1:0:-1]
+                                    - this_copy[:, int(Nx/2) + 1:])
+                                   /(np.sqrt(2) * 1j))
+    eig_vec = eig_vec.real
     eig_vec = eig_vec[:, sort_index]
 
     if return_Corr:
