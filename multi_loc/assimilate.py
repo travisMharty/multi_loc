@@ -215,24 +215,104 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
     S = np.concatenate(
         [S, np.zeros([y_size, dimension - y_size])],
         axis=1)
-    to_return = [P_sqrt, P_inv_sqrt, R_sqrt, R_inv_sqrt,
-                 U, S, VT]
+    to_return = {'P_sqrt': P_sqrt, 'P_inv_sqrt': P_inv_sqrt,
+                 'R_sqrt': R_sqrt, 'R_inv_sqrt': R_inv_sqrt,
+                 'U': U, 'S': S, 'VT': VT, 'H': H}
     if return_Ts:
         Tx = VT @ P_inv_sqrt
         Tx_inv = P_sqrt @ VT.conj().T
         Ty = U.conj().T @ R_inv_sqrt
         Ty_inv = R_sqrt @ U
-        to_return.append(Tx)
-        to_return.append(Tx_inv)
-        to_return.append(Ty)
-        to_return.append(Ty_inv)
+        to_return['Tx'] = Tx
+        to_return['Tx_inv'] = Tx_inv
+        to_return['Ty'] = Ty
+        to_return['Ty_inv'] = Ty_inv
         return to_return
     else:
         return to_return
 
 
-def transformed_EnKF(ens_num, H, eig_val_p=None, eig_vec_p=None, P=None,
-                     eig_val_r=None, eig_vec_r=None, R=None):
+def trans_assim_trials(*, mu, H, ens_size, assim_num,
+                       trial_num, true_mats, trans_mats=None,
+                       ground_truth=None, obs_array=None,
+                       ensemble_array=None):
     """
 
     """
+    state_size = H.shape[1]
+    obs_size = H.shape[0]
+
+    # initialize arrays
+    rmse = np.ones([trial_num, assim_num + 1]) * np.nan
+
+    # load arrays from dictionary
+    P_sqrt_truth = true_mats['P_sqrt']
+    R_sqrt = true_mats['R_sqrt']
+
+    # generate arrays
+    if ground_truth is None:
+        ground_truth = generate_ensemble(
+            trial_num, mu, P_sqrt_truth)
+    if obs_array is None:
+        obs_array = ((H @ ground_truth)[:, :, None]
+                     + np.einsum(
+                         'ij, jk... ->ik...', R_sqrt,
+                         np.random.randn(obs_size, trial_num, assim_num)))
+    if ensemble_array is None:
+        ensemble_array = np.ones(
+            [state_size, ens_size, trial_num, assim_num + 1]) * np.nan
+        for t_num in range(trial_num):
+            ensemble_array[:, :, t_num, 0] = generate_ensemble(
+                ens_size, mu, P_sqrt_truth)
+    for t_num in range(trial_num):
+        error = (ground_truth[:, t_num]
+                 - ensemble_array[:, :, t_num, 0].mean(axis=1))
+        rmse[t_num, 0] = np.sqrt((error**2).mean())
+        for a_num in range(assim_num):
+            # add test to generate trans matrices
+            y_obs = obs_array[:, t_num, a_num]
+            ensemble_array[:, :, t_num, a_num + 1] = assimilate_TEnKF(
+                ensemble=ensemble_array[:, :, t_num, a_num],
+                y_obs=y_obs, H=H, trans_mats=trans_mats)
+            error = (ground_truth[:, t_num]
+                     - ensemble_array[:, :, t_num, a_num + 1].mean(axis=1))
+            rmse[t_num, a_num + 1] = np.sqrt((error**2).mean())
+    to_return = {
+        'ensemble_array': ensemble_array, 'ground_truth': ground_truth,
+        'obs_array': obs_array, 'rmse': rmse, 'trans_mats': trans_mats
+    }
+    return to_return
+
+
+def assimilate_TEnKF(*, ensemble, y_obs, H, trans_mats):
+    """
+
+    """
+    obs_size = H.shape[0]
+    ens_size = ensemble.shape[1]
+
+    # Load or calculate transformation matrices
+    if trans_mats is not None:
+        Tx = trans_mats['Tx']
+        Tx_inv = trans_mats['Tx_inv']
+        Ty = trans_mats['Ty']
+        S_reduced = trans_mats['S'].diagonal()[:, None]
+        S = trans_mats['S']
+    else:
+        calc_trans_mats()
+
+    # Transform to diagonal space
+    y_trans = (Ty @ y_obs)[:, None]
+    ens_trans = Tx @ ensemble
+
+    y_trans = y_trans + np.random.randn(obs_size, ens_size)
+    P_reduced = np.var(ens_trans[:obs_size], axis=1)[:, None]
+    K = ((S_reduced * P_reduced)
+         / (1 + S_reduced**2 * P_reduced))
+    ens_trans[:obs_size] = (ens_trans[:obs_size]
+                         + K * (y_trans - S @ ens_trans))
+    return Tx_inv @ ens_trans
+
+
+def calc_trans_mats():
+    return None
