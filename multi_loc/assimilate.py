@@ -284,7 +284,7 @@ def trans_assim_trials(*, mu, H, ens_size, assim_num,
     return to_return
 
 
-def assimilate_TEnKF(*, ensemble, y_obs, H, trans_mats):
+def assimilate_TEnKF(*, ensemble, y_obs, H, trans_mats=None):
     """
 
     """
