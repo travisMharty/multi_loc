@@ -329,7 +329,6 @@ def random_H(N, obs_size):
         np.arange(N), size=obs_size, replace=False)
     locs.sort()
     locs = locs.astype(int)
-    print(locs)
     dist = np.random.uniform(0, 1, size=obs_size)
     H = np.zeros([obs_size, N])
     rows = np.arange(obs_size, dtype=int)
