@@ -316,3 +316,24 @@ def assimilate_TEnKF(*, ensemble, y_obs, H, trans_mats=None):
 
 def calc_trans_mats():
     return None
+
+
+def random_H(N, obs_size):
+    """
+    Returns random forward observation matrix which will observe obs_size
+    locations of a state space which is of size N. The observation locations
+    will almost surely not fall on a state space location. The nearest two
+    state locations will be interpolated to the observation location.
+    """
+    locs = np.random.choice(
+        np.arange(N), size=obs_size, replace=False)
+    locs.sort()
+    locs = locs.astype(int)
+    print(locs)
+    dist = np.random.uniform(0, 1, size=obs_size)
+    H = np.zeros([obs_size, N])
+    rows = np.arange(obs_size, dtype=int)
+    H[rows, locs] = dist
+    locs = (locs + 1)%N
+    H[rows, locs] = 1 - dist
+    return H
