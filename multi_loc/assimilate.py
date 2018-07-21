@@ -336,3 +336,7 @@ def random_H(N, obs_size):
     locs = (locs + 1)%N
     H[rows, locs] = 1 - dist
     return H
+
+
+def multi_loc_opt(ensemble, sig_array, ens_ens_size, resample_size):
+    return None
