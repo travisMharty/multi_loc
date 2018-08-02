@@ -284,40 +284,6 @@ def trans_assim_trials(*, mu, H, ens_size, assim_num,
     return to_return
 
 
-def assimilate_TEnKF(*, ensemble, y_obs, H, trans_mats=None):
-    """
-
-    """
-    obs_size = H.shape[0]
-    ens_size = ensemble.shape[1]
-
-    # Load or calculate transformation matrices
-    if trans_mats is not None:
-        Tx = trans_mats['Tx']
-        Tx_inv = trans_mats['Tx_inv']
-        Ty = trans_mats['Ty']
-        S_reduced = trans_mats['S'].diagonal()[:, None]
-        S = trans_mats['S']
-    else:
-        calc_trans_mats()
-
-    # Transform to diagonal space
-    y_trans = (Ty @ y_obs)[:, None]
-    ens_trans = Tx @ ensemble
-
-    y_trans = y_trans + np.random.randn(obs_size, ens_size)
-    P_reduced = np.var(ens_trans[:obs_size], axis=1)[:, None]
-    K = ((S_reduced * P_reduced)
-         / (1 + S_reduced**2 * P_reduced))
-    ens_trans[:obs_size] = (ens_trans[:obs_size]
-                         + K * (y_trans - S @ ens_trans))
-    return Tx_inv @ ens_trans
-
-
-def calc_trans_mats():
-    return None
-
-
 def random_H(N, obs_size):
     """
     Returns random forward observation matrix which will observe obs_size
