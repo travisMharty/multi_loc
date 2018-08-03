@@ -1,6 +1,10 @@
+import math
 import numpy as np
 import scipy as sp
 from multi_loc import covariance
+from sklearn.utils.extmath import randomized_svd
+
+import multi_loc.utilities as utilities
 
 
 def generate_ensemble(ens_size, mu, P_sqrt=None, eig_val=None, eig_vec=None):
@@ -104,7 +108,7 @@ def inverse_sqrt(C=None, eig_val=None, eig_vec=None):
         C_diag = is_diag(C)
     else:
         C_diag = False
-    eig_condition = ((eig_val is None )
+    eig_condition = ((eig_val is None)
                      and (eig_vec is None)
                      and not C_diag)
     if eig_condition:
@@ -232,58 +236,6 @@ def transformation_matrices(H, eig_val_p=None, eig_vec_p=None, P=None,
         return to_return
 
 
-def trans_assim_trials(*, mu, H, ens_size, assim_num,
-                       trial_num, true_mats, trans_mats=None,
-                       ground_truth=None, obs_array=None,
-                       ensemble_array=None):
-    """
-
-    """
-    state_size = H.shape[1]
-    obs_size = H.shape[0]
-
-    # initialize arrays
-    rmse = np.ones([trial_num, assim_num + 1]) * np.nan
-
-    # load arrays from dictionary
-    P_sqrt_truth = true_mats['P_sqrt']
-    R_sqrt = true_mats['R_sqrt']
-
-    # generate arrays
-    if ground_truth is None:
-        ground_truth = generate_ensemble(
-            trial_num, mu, P_sqrt_truth)
-    if obs_array is None:
-        obs_array = ((H @ ground_truth)[:, :, None]
-                     + np.einsum(
-                         'ij, jk... ->ik...', R_sqrt,
-                         np.random.randn(obs_size, trial_num, assim_num)))
-    if ensemble_array is None:
-        ensemble_array = np.ones(
-            [state_size, ens_size, trial_num, assim_num + 1]) * np.nan
-        for t_num in range(trial_num):
-            ensemble_array[:, :, t_num, 0] = generate_ensemble(
-                ens_size, mu, P_sqrt_truth)
-    for t_num in range(trial_num):
-        error = (ground_truth[:, t_num]
-                 - ensemble_array[:, :, t_num, 0].mean(axis=1))
-        rmse[t_num, 0] = np.sqrt((error**2).mean())
-        for a_num in range(assim_num):
-            # add test to generate trans matrices
-            y_obs = obs_array[:, t_num, a_num]
-            ensemble_array[:, :, t_num, a_num + 1] = assimilate_TEnKF(
-                ensemble=ensemble_array[:, :, t_num, a_num],
-                y_obs=y_obs, H=H, trans_mats=trans_mats)
-            error = (ground_truth[:, t_num]
-                     - ensemble_array[:, :, t_num, a_num + 1].mean(axis=1))
-            rmse[t_num, a_num + 1] = np.sqrt((error**2).mean())
-    to_return = {
-        'ensemble_array': ensemble_array, 'ground_truth': ground_truth,
-        'obs_array': obs_array, 'rmse': rmse, 'trans_mats': trans_mats
-    }
-    return to_return
-
-
 def random_H(N, obs_size):
     """
     Returns random forward observation matrix which will observe obs_size
@@ -299,10 +251,126 @@ def random_H(N, obs_size):
     H = np.zeros([obs_size, N])
     rows = np.arange(obs_size, dtype=int)
     H[rows, locs] = dist
-    locs = (locs + 1)%N
+    locs = (locs + 1) % N
     H[rows, locs] = 1 - dist
     return H
 
 
-def multi_loc_opt(ensemble, sig_array, ens_ens_size, resample_size):
-    return None
+def multi_loc_opt(*, sig_array, rho_array, P_sample, P_sample_array,
+                  H, U, S, VT):
+    obs_size, dimension = H.shape
+    ens_ens_size = P_sample_array.shape[-1]
+    total_sig = sig_array.sum()
+    sig_bin_num = sig_array.size
+    dx = 1/dimension
+    comb_num = round(
+        math.factorial(ens_ens_size)
+        / (math.factorial(2)
+           * math.factorial(ens_ens_size - 2)))
+
+    s_array = np.ones([total_sig, rho_array.size, ens_ens_size]) * np.nan
+    U_array = np.ones([obs_size, total_sig,
+                       rho_array.size, ens_ens_size]) * np.nan
+    V_array = np.ones([dimension, total_sig,
+                       rho_array.size, ens_ens_size]) * np.nan
+    sig_num = sig_array[0]
+
+    eye_array = np.repeat(np.eye(dimension)[:, :, None],
+                          ens_ens_size, axis=-1)
+    proj_array = eye_array.copy()
+    proj = np.eye(dimension)
+
+    V_average_angle_2_truth = np.ones(
+        [sig_bin_num, rho_array.size]) * np.nan
+    V_average_angle = np.ones(
+        [sig_bin_num, rho_array.size]) * np.nan
+
+    opt_rho_array = np.ones(sig_bin_num) * np.nan
+    opt_rho_index_array = opt_rho_array.copy()
+    opt_s_array_ens = np.ones([total_sig, ens_ens_size]) * np.nan
+    opt_U_array_ens = np.ones([obs_size, total_sig, ens_ens_size]) * np.nan
+    opt_V_array_ens = np.ones([dimension, total_sig, ens_ens_size]) * np.nan
+
+    opt_s_array = np.ones([total_sig]) * np.nan
+    opt_U_array = np.ones([obs_size, total_sig]) * np.nan
+    opt_V_array = np.ones([dimension, total_sig]) * np.nan
+
+    proj = np.eye(dimension)
+    last_sig = 0
+    for sig_count, sig_num in enumerate(sig_array):
+        sig_slice = slice(last_sig, last_sig + sig_num)
+        print('')
+        print(sig_slice)
+        last_sig = last_sig + sig_num
+        true_V = VT[sig_slice].T
+        for rho_count, rho_loc in enumerate(rho_array):
+            print(rho_count, end='; ')
+            [loc] = covariance.generate_circulant(
+                dimension, dx, rho_loc, covariance.fft_sqd_exp_1d,
+                return_Corr=True, return_eig=False)
+            loc /= loc.max()
+            for ens_count in range(ens_ens_size):
+                P_loc = P_sample_array[:, :, ens_count] * loc
+                this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+                aU, aS, aVT = randomized_svd(
+                    H @ this_P_sqrt @ proj_array[:, :, ens_count],
+                    n_components=sig_num)
+                aS = np.diag(aS)
+
+                U_array[:, sig_slice, rho_count, ens_count] = aU
+                s_array[sig_slice, rho_count, ens_count] = aS.diagonal()
+                V_array[:, sig_slice, rho_count, ens_count] = aVT.T
+            angle_2_truth = np.ones(ens_ens_size) * np.nan
+            comb_count = 0
+            angles = np.ones(comb_num) * np.nan
+            for ens_count in range(ens_ens_size):
+                aV = V_array[:, sig_slice, rho_count, ens_count]
+                angle_2_truth[ens_count] = utilities.angle(aV, true_V)
+                for other_ens_count in range(ens_count + 1, ens_ens_size):
+                    oV = V_array[:, sig_slice, rho_count, other_ens_count]
+                    this_angle = utilities.angle(aV, oV)
+                    angles[comb_count] = this_angle
+                    comb_count += 1
+            V_average_angle[sig_count, rho_count] = angles.mean()
+            this_angle = angle_2_truth.mean()
+            V_average_angle_2_truth[sig_count, rho_count] = this_angle
+        opt_rho_index = V_average_angle[sig_count].argmin()
+        opt_rho_index_array[sig_count] = opt_rho_index
+        opt_rho_array[sig_count] = rho_array[opt_rho_index]
+        opt_U_array_ens[:, sig_slice] = U_array[:, sig_slice,
+                                                opt_rho_index, :]
+        opt_s_array_ens[sig_slice] = s_array[sig_slice, opt_rho_index, :]
+        opt_V_array_ens[:, sig_slice] = V_array[:, sig_slice,
+                                                opt_rho_index, :]
+        proj_array = eye_array - np.einsum(
+            'ij...,kj...->ik...',
+            opt_V_array_ens[:, :sig_slice.stop],
+            opt_V_array_ens[:, :sig_slice.stop])
+
+        # calculate final V
+        [loc] = covariance.generate_circulant(
+            dimension, dx, opt_rho_array[sig_count],
+            covariance.fft_sqd_exp_1d,
+            return_Corr=True, return_eig=False)
+        loc /= loc.max()
+
+        P_loc = P_sample * loc
+        this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+        aU, aS, aVT = randomized_svd(
+            H @ this_P_sqrt @ proj,
+            n_components=sig_num)
+        opt_U_array[:, sig_slice] = aU[:, :sig_num]
+        opt_s_array[sig_slice] = aS[:sig_num]
+        opt_V_array[:, sig_slice] = aVT[:sig_num, :].T
+        proj = np.eye(dimension) - (opt_V_array[:, :sig_slice.stop]
+                                    @ opt_V_array[:, :sig_slice.stop].T)
+    a_dict = {'opt_rho_array': opt_rho_array,
+              'opt_U_array_ens': opt_U_array_ens,
+              'opt_s_array_ens': opt_s_array_ens,
+              'opt_V_array_ens': opt_V_array_ens,
+              'opt_U_array': opt_U_array,
+              'opt_s_array': opt_s_array,
+              'opt_V_array': opt_V_array,
+              'V_average_angle': V_average_angle,
+              'V_average_angle_2_truth': V_average_angle_2_truth}
+    return a_dict
