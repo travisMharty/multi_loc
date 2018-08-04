@@ -257,7 +257,7 @@ def random_H(N, obs_size):
 
 
 def multi_loc_opt(*, sig_array, rho_array, P_sample, P_sample_array,
-                  H, U, S, VT):
+                  H, U, S, VT, stopping_angle, est_rank):
     obs_size, dimension = H.shape
     ens_ens_size = P_sample_array.shape[-1]
     total_sig = sig_array.sum()
@@ -286,14 +286,13 @@ def multi_loc_opt(*, sig_array, rho_array, P_sample, P_sample_array,
         [sig_bin_num, rho_array.size]) * np.nan
 
     opt_rho_array = np.ones(sig_bin_num) * np.nan
-    opt_rho_index_array = opt_rho_array.copy()
     opt_s_array_ens = np.ones([total_sig, ens_ens_size]) * np.nan
     opt_U_array_ens = np.ones([obs_size, total_sig, ens_ens_size]) * np.nan
     opt_V_array_ens = np.ones([dimension, total_sig, ens_ens_size]) * np.nan
 
-    opt_s_array = np.ones([total_sig]) * np.nan
-    opt_U_array = np.ones([obs_size, total_sig]) * np.nan
-    opt_V_array = np.ones([dimension, total_sig]) * np.nan
+    opt_s_array = np.ones([0])
+    opt_U_array = np.ones([obs_size, 0])
+    opt_V_array = np.ones([dimension, 0])
 
     proj = np.eye(dimension)
     last_sig = 0
@@ -335,35 +334,55 @@ def multi_loc_opt(*, sig_array, rho_array, P_sample, P_sample_array,
             this_angle = angle_2_truth.mean()
             V_average_angle_2_truth[sig_count, rho_count] = this_angle
         opt_rho_index = V_average_angle[sig_count].argmin()
-        opt_rho_index_array[sig_count] = opt_rho_index
-        opt_rho_array[sig_count] = rho_array[opt_rho_index]
-        opt_U_array_ens[:, sig_slice] = U_array[:, sig_slice,
-                                                opt_rho_index, :]
-        opt_s_array_ens[sig_slice] = s_array[sig_slice, opt_rho_index, :]
-        opt_V_array_ens[:, sig_slice] = V_array[:, sig_slice,
-                                                opt_rho_index, :]
-        proj_array = eye_array - np.einsum(
-            'ij...,kj...->ik...',
-            opt_V_array_ens[:, :sig_slice.stop],
-            opt_V_array_ens[:, :sig_slice.stop])
+        if V_average_angle[sig_count, opt_rho_index] > stopping_angle:
+            [loc] = covariance.generate_circulant(
+                dimension, dx, opt_rho_array[sig_count - 1],
+                covariance.fft_sqd_exp_1d,
+                return_Corr=True, return_eig=False)
+            loc /= loc.max()
 
-        # calculate final V
-        [loc] = covariance.generate_circulant(
-            dimension, dx, opt_rho_array[sig_count],
-            covariance.fft_sqd_exp_1d,
-            return_Corr=True, return_eig=False)
-        loc /= loc.max()
+            P_loc = P_sample * loc
+            this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+            break
+        else:
+            opt_rho_array[sig_count] = rho_array[opt_rho_index]
+            opt_U_array_ens[:, sig_slice] = U_array[:, sig_slice,
+                                                    opt_rho_index, :]
+            opt_s_array_ens[sig_slice] = s_array[sig_slice, opt_rho_index, :]
+            opt_V_array_ens[:, sig_slice] = V_array[:, sig_slice,
+                                                    opt_rho_index, :]
+            proj_array = eye_array - np.einsum(
+                'ij...,kj...->ik...',
+                opt_V_array_ens[:, :sig_slice.stop],
+                opt_V_array_ens[:, :sig_slice.stop])
 
-        P_loc = P_sample * loc
-        this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+            # calculate final V
+            [loc] = covariance.generate_circulant(
+                dimension, dx, opt_rho_array[sig_count],
+                covariance.fft_sqd_exp_1d,
+                return_Corr=True, return_eig=False)
+            loc /= loc.max()
+
+            P_loc = P_sample * loc
+            this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+            aU, aS, aVT = randomized_svd(
+                H @ this_P_sqrt @ proj,
+                n_components=sig_num)
+            opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+            opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+            opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
+            proj = np.eye(dimension) - (opt_V_array
+                                        @ opt_V_array.T)
+
+    previous_sigs = sig_array[:sig_count - 1].sum()
+    needed_sigs = est_rank - previous_sigs
+    if needed_sigs > 0:
         aU, aS, aVT = randomized_svd(
             H @ this_P_sqrt @ proj,
-            n_components=sig_num)
-        opt_U_array[:, sig_slice] = aU[:, :sig_num]
-        opt_s_array[sig_slice] = aS[:sig_num]
-        opt_V_array[:, sig_slice] = aVT[:sig_num, :].T
-        proj = np.eye(dimension) - (opt_V_array[:, :sig_slice.stop]
-                                    @ opt_V_array[:, :sig_slice.stop].T)
+            n_components=needed_sigs)
+        opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+        opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+        opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
     a_dict = {'opt_rho_array': opt_rho_array,
               'opt_U_array_ens': opt_U_array_ens,
               'opt_s_array_ens': opt_s_array_ens,
