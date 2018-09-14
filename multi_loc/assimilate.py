@@ -393,3 +393,100 @@ def multi_loc_opt(*, sig_array, rho_array, P_sample, P_sample_array,
               'V_average_angle': V_average_angle,
               'V_average_angle_2_truth': V_average_angle_2_truth}
     return a_dict
+
+
+def multi_loc_dictate_rho(
+        *, sig_array, opt_rho_array, P_sample,
+        H, U, S, VT, est_rank):
+    obs_size, dimension = H.shape
+
+    total_sig = sig_array.sum()
+    sig_bin_num = sig_array.size
+    dx = 1/dimension
+
+    opt_s_array = np.ones([0])
+    opt_U_array = np.ones([obs_size, 0])
+    opt_V_array = np.ones([dimension, 0])
+
+    proj = np.eye(dimension)
+    last_sig = 0
+    for sig_count, sig_num in enumerate(sig_array):
+        sig_slice = slice(last_sig, last_sig + sig_num)
+        print('')
+        print(sig_slice)
+        last_sig = last_sig + sig_num
+        [loc] = covariance.generate_circulant(
+            dimension, dx, opt_rho_array[sig_count],
+            covariance.fft_sqd_exp_1d,
+            return_Corr=True, return_eig=False)
+        loc /= loc.max()
+        P_loc = P_sample * loc
+        this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+        aU, aS, aVT = randomized_svd(
+            H @ this_P_sqrt @ proj,
+            n_components=sig_num)
+        opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+        opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+        opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
+        proj = np.eye(dimension) - (opt_V_array
+                                    @ opt_V_array.T)
+    previous_sigs = sig_array.sum()
+    needed_sigs = est_rank - previous_sigs
+    if needed_sigs > 0:
+        aU, aS, aVT = randomized_svd(
+            H @ this_P_sqrt @ proj,
+            n_components=needed_sigs)
+        opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+        opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+        opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
+    a_dict = {'opt_U_array': opt_U_array,
+              'opt_s_array': opt_s_array,
+              'opt_V_array': opt_V_array}
+    return a_dict
+
+
+# def multi_loc_dictate_rho(
+#         *, sig_array, opt_rho_array, P_sample,
+#         H, U, S, VT, est_rank):
+#     obs_size, dimension = H.shape
+#     dx = 1/dimension
+
+#     opt_s_array = np.ones([0])
+#     opt_U_array = np.ones([obs_size, 0])
+#     opt_V_array = np.ones([dimension, 0])
+
+#     proj = np.eye(dimension)
+#     last_sig = 0
+#     for sig_count, sig_num in enumerate(sig_array):
+#         sig_slice = slice(last_sig, last_sig + sig_num)
+#         print('')
+#         print(sig_slice)
+#         last_sig = last_sig + sig_num
+#         [loc] = covariance.generate_circulant(
+#             dimension, dx, opt_rho_array[sig_count],
+#             covariance.fft_sqd_exp_1d,
+#             return_Corr=True, return_eig=False)
+#         loc /= loc.max()
+#         P_loc = P_sample * loc
+#         this_P_sqrt = covariance.matrix_sqrt(P_loc).real
+#         aU, aS, aVT = randomized_svd(
+#             H @ this_P_sqrt @ proj,
+#             n_components=sig_num)
+#         opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+#         opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+#         opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
+#         proj = np.eye(dimension) - (opt_V_array
+#                                     @ opt_V_array.T)
+#     previous_sigs = sig_array.sum()
+#     needed_sigs = est_rank - previous_sigs
+#     if needed_sigs > 0:
+#         aU, aS, aVT = randomized_svd(
+#             H @ this_P_sqrt @ proj,
+#             n_components=needed_sigs)
+#         opt_U_array = np.concatenate([opt_U_array, aU], axis=1)
+#         opt_s_array = np.concatenate([opt_s_array, aS], axis=0)
+#         opt_V_array = np.concatenate([opt_V_array, aVT.T], axis=1)
+#     a_dict = {'opt_U_array': opt_U_array,
+#               'opt_s_array': opt_s_array,
+#               'opt_V_array': opt_V_array}
+#     return a_dict
