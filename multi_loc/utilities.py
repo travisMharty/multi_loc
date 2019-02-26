@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+from scipy import integrate
 
 def angle(V0, V1):
     """
@@ -97,3 +98,51 @@ def bayes_bootstrap_weights(ens_size, ens_ens_size):
                              axis=1)
     weights = weights[:, 1:] - weights[:, :-1]
     return weights
+
+
+def lorenz_96(x, F=8):
+    """
+    Lorenz 96 state derivative ie dx/dt = lorenz_96(x).
+    """
+    xp1 = np.roll(x, -1, axis=0)
+    xm2 = np.roll(x, 2, axis=0)
+    xm1 = np.roll(x, 1, axis=0)
+    return (xp1 - xm2) * xm1 - x + F
+
+
+def return_lorenz_96_data(x0, F, t):
+    def this_L96(x, t):
+        return lorenz_96(x, F=F)
+    x = integrate.odeint(this_L96, x0, t)
+    return x
+
+
+def L96_deriv(x):
+    n = x.size
+    dJdt = -1 * np.eye(n)
+    for i in range(n):
+        dJdt[i, i - 2] = -x[i - 1]
+        dJdt[i, i - 1] = x[np.mod(i + 1, n)] - x[i - 2]
+        dJdt[i, np.mod(i + 1, n)] = x[i - 1]
+    return dJdt
+
+
+def L96_and_deriv(x_J, n, F=8):
+    x = x_J[:n]
+    dJdt = L96_deriv(x)
+    dxdt  = lorenz_96(x, F=F)
+    dxdt_dJdt = np.concatenate([dxdt, dJdt.ravel()])
+    return dxdt_dJdt
+
+
+def return_lorenz_96_TL(x0, dt, F=8):
+    N_state = x0.size
+    J0 = np.zeros(N_state*N_state)
+    x0_J0 = np.concatenate([x0, J0])
+
+    def this_L96_and_deriv(x_J, t):
+        return L96_and_deriv(x_J, N_state, F=F)
+    x_dM = integrate.odeint(this_L96_and_deriv, x0_J0, [0, dt])
+
+    dM = x_dM[1, N_state:].reshape(N_state, N_state)
+    return dM
