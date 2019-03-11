@@ -146,3 +146,145 @@ def return_lorenz_96_TL(x0, dt, F=8):
 
     dM = x_dM[1, N_state:].reshape(N_state, N_state)
     return dM
+
+
+def L96_multi(X, Y, F=8, c=10, b=10, h=1):
+    """
+    X is the coarse variable, Y is the fine variable.
+    The size of Y should be a multiple of the size of X.
+    """
+    N_X = X.size
+    N_Y = Y.size
+    N_YpX = N_Y//N_X
+
+    if N_X * N_YpX != N_Y:
+        raise Exception('Size of X should evenly divide size of Y.')
+
+    Y_sum = Y.reshape(N_X, N_YpX).sum(axis=1)
+
+    Xp1 = np.roll(X, -1, axis=0)
+    Xm2 = np.roll(X, 2, axis=0)
+    Xm1 = np.roll(X, 1, axis=0)
+    dXdt = (Xp1 - Xm2) * Xm1 - X + F - (h * c) / b * Y_sum
+
+    X_forcing =  np.repeat(X, N_YpX)
+    Ym1 = np.roll(Y, 1, axis=0)
+    Yp2 = np.roll(Y, -2, axis=0)
+    Yp1 = np.roll(Y, -1, axis=0)
+    dYdt = (c * b)*(Ym1 - Yp2) * Yp1 - c*Y + (h*c)/b*X_forcing
+    return dXdt, dYdt
+
+
+def return_L96_multi_data(X0, Y0, t, F=8, b=10, c=10, h=1):
+    """
+    Returns time series starting at X0, Y0, with times t.
+    The size of X0 should evenly divide the size of Y0.
+    """
+    N_X = X0.size
+    N_Y = Y0.size
+    N_YpX = N_Y//N_X
+    if N_X*N_YpX != N_Y:
+        raise Exception('Size of X0 should evenly divide size of Y0.')
+    def this_L96_multi(XY_1D, t):
+        X = XY_1D[:N_X]
+        Y = XY_1D[N_X:]
+        dXdt, dYdt = L96_multi(X, Y, F=F, b=b, c=c, h=h)
+        dXYdt = np.concatenate([dXdt, dYdt])
+        return dXYdt
+    XY0 = np.concatenate([X0, Y0])
+    XY = integrate.odeint(this_L96_multi, XY0, t)
+    XY = XY.T
+    X = XY[:N_X]
+    Y = XY[N_X:]
+    return X, Y
+
+
+def generate_XY_X_ens(X_ts, Y_ts, N_eXY, N_eX):
+    """
+    Subsamples X and Y to generate an ensemble of both X and Y of size N_eXY
+    and an ensemble of X of size N_eX.
+    """
+    N_t = X_ts.shape[1]
+    fine_indices = np.random.choice(N_t, size=N_eXY, replace=False)
+    Y_ens = Y_ts[:, fine_indices]
+    XfY_ens = X_ts[:, fine_indices]
+    XY_ens = np.concatenate([XfY_ens, Y_ens], axis=0)
+
+    coarse_indices = np.random.choice(N_t, size=N_eX, replace=False)
+    X_ens = X_ts[:, coarse_indices]
+    return XY_ens, X_ens
+
+
+def L96_multi_ensemble(XY_ens, X_ens, F=8, c=10, b=10, h=1):
+    """
+    Function to return the derivative of XY and X as described by Lorenz 96
+    model for an ensemble of XY and of X alone. Y forcing for X alone ensemble
+    comes from the XY ensemble.
+    """
+    N_XY, N_eXY = XY_ens.shape
+    N_X, N_eX = X_ens.shape
+    N_Y = N_XY - N_X
+    N_YpX = N_Y // N_X
+    if N_X * N_YpX != N_Y:
+        raise Exception('Size of X should evenly divide size of Y.')
+    XfY_ens = XY_ens[:N_X]
+    Y_ens = XY_ens[N_X:]
+
+    Y_sum = Y_ens.reshape(N_X, N_YpX, N_eXY).sum(axis=1)
+
+    Xp1 = np.roll(XfY_ens, -1, axis=0)
+    Xm2 = np.roll(XfY_ens, 2, axis=0)
+    Xm1 = np.roll(XfY_ens, 1, axis=0)
+    dXfYdt = (Xp1 - Xm2) * Xm1 - XfY_ens + F - (h * c) / b * Y_sum
+
+    X_forcing =  np.repeat(XfY_ens, N_YpX, axis=0)
+    Ym1 = np.roll(Y_ens, 1, axis=0)
+    Yp2 = np.roll(Y_ens, -2, axis=0)
+    Yp1 = np.roll(Y_ens, -1, axis=0)
+    dYdt = (c * b) * (Ym1 - Yp2) * Yp1 - c*Y_ens + (h*c)/b*X_forcing
+
+    dXYdt = np.concatenate([dXfYdt, dYdt],
+                           axis=0)
+
+    repeats = N_eX / N_eXY
+    if repeats != int(repeats):
+        raise Exception('Ensemble size of X should evenly divide ensemble size of Y.')
+    repeats = int(repeats)
+    Y_sum = np.repeat(Y_sum, repeats, axis=1)
+
+    Xp1 = np.roll(X_ens, -1, axis=0)
+    Xm2 = np.roll(X_ens, 2, axis=0)
+    Xm1 = np.roll(X_ens, 1, axis=0)
+    dXdt = (Xp1 - Xm2) * Xm1 - X_ens + F - (h * c) / b * Y_sum
+
+    return dXYdt, dXdt
+
+
+def return_L96_multi_ens_data(XY0_ens, X0_ens, t, F=8, b=10, c=10, h=1):
+    """
+    Returns XY and X ensemble using L96_multi_ensemble integrated over times t.
+    """
+    N_XY, N_eXY = XY0_ens.shape
+    N_X, N_eX = X0_ens.shape
+    N_Y = N_XY - N_X
+    N_YpX = N_Y // N_X
+    if N_X * N_YpX != N_Y:
+        raise Exception('Size of X should evenly divide size of Y.')
+    XY_ens_size = N_XY * N_eXY
+    N_t = t.size
+    def this_L96_multi_ens(XYX_raveled, t):
+        XY_ens = XYX_raveled[:XY_ens_size].reshape(N_XY, N_eXY)
+        X_ens = XYX_raveled[XY_ens_size:].reshape(N_X, N_eX)
+        dXYdt, dXdt = L96_multi_ensemble(
+            XY_ens, X_ens, F=F, b=b, c=c, h=h)
+        to_return = np.concatenate(
+            [dXYdt.ravel(), dXdt.ravel()])
+        return to_return
+    XY0_raveled = np.concatenate(
+        [XY0_ens.ravel(), X0_ens.ravel()])
+    XYX_raveled = integrate.odeint(
+        this_L96_multi_ens, XY0_raveled, t)
+    XYX_raveled = XYX_raveled.T
+    XY_ens_ts = XYX_raveled[:XY_ens_size].reshape(N_XY, N_eXY, N_t)
+    X_ens_ts = XYX_raveled[XY_ens_size:].reshape(N_X, N_eX, N_t)
+    return XY_ens_ts, X_ens_ts
