@@ -571,3 +571,95 @@ def trans_assim_trials(*, mu, H, ens_size, assim_num,
                 'obs_array': obs_array, 'rmse': rmse, 'trans_mats': trans_mats
             }
     return to_return
+
+
+def dual_scale_enkf(X_ens_input, Z_ens_input,
+                    X_obs_input, Z_obs_input,
+                    *, H, R, R_coar,
+                    H_sub, R_sub, coarse,
+                    a=None, rho=None,
+                    rho_coar=None,
+                    use_SVD_loc=True,
+                    use_P_X=False):
+
+    X_ens = X_ens_input.copy()
+    Z_ens = Z_ens_input.copy()
+    Z_obs = Z_obs_input.copy()
+    X_obs = X_obs_input.copy()
+    N_Z, N_eZ = Z_ens.shape
+    N_X, N_eX = X_ens_input.shape
+
+    P_X = np.cov(X_ens)
+
+    # update Z
+    P_Z = np.cov(Z_ens)
+    if a is not None:
+        P_Z *= (1 + a)
+        mu_Z = np.mean(Z_ens, axis=-1)
+        Z_ens -= mu_Z[:, None]
+        Z_ens *= np.sqrt(1 + a)
+        Z_ens += mu_Z[:, None]
+    if rho is not None:
+        P_Z *= rho
+    if use_SVD_loc:
+        trans_mats = transformation_matrices(
+            H_sub, P=P_X,
+            R=R_sub)
+        VT_X = trans_mats['VT']
+        VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
+        P_Z_ll_X = (VT_X_interp.T
+                    @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
+                    @ VT_X_interp)
+        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z_ll_X)))
+        rho_Z_ll_X = D_inv_sqrt @ P_Z_ll_X @ D_inv_sqrt
+        P_Z_orth_X = P_Z - P_Z_ll_X
+        if rho_coar is not None:
+            P_Z_orth_X_loc = rho_coar * P_Z_orth_X
+        else:
+            P_Z_orth_X_loc = rho_Z_ll_X**10 * P_Z_orth_X
+        # P_Z_orth_X_loc *= 0
+        P_Z_loc = P_Z_ll_X + P_Z_orth_X_loc
+        P_Z = P_Z_loc
+    if use_P_X:
+        trans_mats = transformation_matrices(
+            H_sub, P=P_X,
+            R=R_sub, return_Ts=True)
+        VT_X = trans_mats['VT']
+        S_X = trans_mats['S']
+        VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
+        P_Z = VT_X_interp.T @ S_X**2 @ VT_X_interp * coarse
+
+    import matplotlib.pyplot as plt
+    plt.figure()
+    im = plt.imshow(P_Z)
+    plt.colorbar(im)
+    plt.title('P_Z_loc')
+
+    plt.figure()
+    im = plt.imshow(P_Z_loc)
+    plt.colorbar(im)
+    plt.title('P_Z_loc')
+
+    plt.figure()
+    im = plt.imshow(P_Z_orth_X)
+    plt.colorbar(im)
+    plt.title('P_Z_orth')
+
+    plt.figure()
+    im = plt.imshow(P_Z_orth_X_loc)
+    plt.colorbar(im)
+    plt.title('P_Z_orth_X_loc')
+
+    temp1 = (R + H.dot(P_Z.dot(H.T))).T
+    temp2 = H.dot(P_Z.T)
+    K = np.linalg.solve(temp1, temp2).T
+    Z_obs_ens = np.random.multivariate_normal(Z_obs, R, N_eZ).T
+
+    Z_ens = Z_ens + K @ (Z_obs_ens - H @ Z_ens)
+
+    # update X
+    K = P_X @ np.linalg.inv(P_X + R_coar)
+    X_obs_ens = np.random.multivariate_normal(X_obs, R_coar, N_eX).T
+    X_ens = X_ens + K @ (X_obs_ens - X_ens)
+
+    return X_ens, Z_ens

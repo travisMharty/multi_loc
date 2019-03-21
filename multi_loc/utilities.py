@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from scipy import integrate
+from scipy import integrate, interpolate, ndimage
 
 def angle(V0, V1):
     """
@@ -288,3 +288,219 @@ def return_L96_multi_ens_data(XY0_ens, X0_ens, t, F=8, b=10, c=10, h=1):
     XY_ens_ts = XYX_raveled[:XY_ens_size].reshape(N_XY, N_eXY, N_t)
     X_ens_ts = XYX_raveled[XY_ens_size:].reshape(N_X, N_eX, N_t)
     return XY_ens_ts, X_ens_ts
+
+
+def LM3(Z, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    X = window_sum_Z(Z, I=I, alpha=alpha, beta=beta)
+    Y = Z - X
+
+    T1 = bracket([X], K)
+    T2 = b**2 * bracket([Y], 1)
+    T3 = c * bracket([Y, X], 1)
+
+    dZdt = T1 + T2 + T3 - X - b*Y + F
+    return dZdt
+
+
+def window_sum_Z(Z,*, I, alpha, beta):
+    weights = np.abs(np.arange(-I, I + 1, dtype=float))
+    weights = alpha - beta * weights
+    weights[0] *= 1/2
+    weights[-1] *= 1/2
+    X = ndimage.convolve1d(Z, weights, mode='wrap', axis=0)
+    return X
+
+
+def bracket(XY, K):
+    if len(XY) == 1:
+        to_return = bracket_1(XY, K)
+    else:
+        to_return = bracket_2(XY, K)
+    return to_return
+
+
+def bracket_2(XY, K):
+    """
+    Only works for K=1 for now.
+    """
+    if K == 1:
+        X, Y = XY
+        T1 = -1 * np.roll(X, 2, axis=0) * np.roll(Y, 1, axis=0)
+        T2 = np.roll(X, 1, axis=0) * np.roll(Y, -1, axis=0)
+        return T1 + T2
+    else:
+        raise Exception('Currently only works for K=1')
+
+
+def bracket_1(XY, K):
+    X = XY[0]
+    if K == 1:
+        T1 = -1 * np.roll(X, 2, axis=0) * np.roll(X, 1, axis=0)
+        T2 = np.roll(X, 1, axis=0) * np.roll(X, -1, axis=0)
+        return T1 + T2
+    elif K % 2 == 0:
+        J = int(K/2)
+        weights = np.ones(2 * J + 1)
+        weights[0] *= 1/2
+        weights[-1] *= 1/2
+        weights /= K
+    elif K % 2 == 1:
+        J = int((K - 1)/2)
+        weights = np.ones(2 * J + 1)
+        weights /= K
+    W = ndimage.convolve1d(X, weights, mode='wrap', axis=0)
+    T1 = -1 * np.roll(W, 2 * K, axis=0) * np.roll(W, K, axis=0)
+    WX = np.roll(W, K, axis=0) * np.roll(X, -K, axis=0)
+    T2 = ndimage.convolve1d(WX, weights, mode='wrap', axis=0)
+    return T1 + T2
+
+
+def return_LM3_data(Z0, t, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+
+    def this_LM3(Z, t):
+        dZdt = LM3(Z, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt
+
+    Z = integrate.odeint(this_LM3, Z0, t)
+    Z = Z.T
+    return Z
+
+
+def generate_X_Z_LM3_ens(Z_ts, N_eX, N_eZ, coarse, I, alpha, beta):
+    N_t = Z_ts.shape[1]
+    fine_indices = np.random.choice(N_t, size=N_eZ, replace=False)
+    Z_ens = Z_ts[:, fine_indices]
+    fine_indices = np.random.choice(N_t, size=N_eX, replace=False)
+    X_ens = Z_ts[:, fine_indices]
+    X_ens = window_sum_Z(X_ens, I=I, alpha=alpha, beta=beta)
+    X_ens = X_ens[::coarse]
+    return X_ens, Z_ens
+
+
+def upscale_on_loop(Zc, coarse):
+    N_Z = Zc.shape[0] * coarse
+    x = np.arange(N_Z)
+    xc = x[::coarse]
+    xc = np.concatenate([xc, [xc[-1] + coarse]])
+    Zc = np.concatenate([Zc, Zc[:, 0][:, None]], axis=1)
+    f = interpolate.interp1d(xc, Zc, axis=-1, kind='quadratic')
+    Z = f(x)/np.sqrt(coarse)
+    return Z
+
+
+def interp_on_loop(Z, x, x_interp, x_max=None):
+    if x_max is None:
+        x_max = x_interp.max()
+    Z = np.concatenate([Z, [Z[0]]])
+    x = np.concatenate([x, [x_max + 1 + x[0]]])
+    f = interpolate.interp1d(x, Z, kind='quadratic')
+    Z_interp = f(x_interp)
+    return Z_interp
+
+
+def return_LM3_ens_data(Z0_ens, t, K=32, I=12, F=15,
+                        b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    N_Z, N_eZ = Z0_ens.shape
+    N_t = t.size
+
+    def this_LM3(Z_1d_ens, t):
+        Z_ens = Z_1d_ens.reshape(N_Z, N_eZ)
+        dZdt = LM3(Z_ens, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt.ravel()
+
+    Z_ens_1d = integrate.odeint(this_LM3, Z0_ens.ravel(), t)
+    Z_ens_1d = Z_ens_1d.T
+    Z_ens_ts = Z_ens_1d.reshape(N_Z, N_eZ, N_t)
+    return Z_ens_ts
+
+
+def LM3_coar(X, Z, coarse, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    X_Z = window_sum_Z(Z, I=I, alpha=alpha, beta=beta)
+    Y = Z - X_Z
+
+    K_coar = K//coarse
+
+    T1 = bracket([X], K_coar)
+    T2 = b**2 * bracket([Y], 1)
+    T2 = window_sum_Z(T2, I=I, alpha=alpha, beta=beta)
+    T2 = T2[::coarse]
+    T3 = c * bracket([Y, X_Z], 1)
+    T3 = window_sum_Z(T3, I=I, alpha=alpha, beta=beta)
+    T3 = T3[::coarse]
+    T4 = -1 * X
+    T5 = -b * Y
+    T5 = window_sum_Z(T5, I=I, alpha=alpha, beta=beta)
+    T5 = T5[::coarse]
+    dXdt = T1 + T2 + T3 + T4 + T5 + F
+
+    return dXdt
+
+
+def return_LM3_coar_data(X0, t, Z, coarse=8,
+                         K=32, I=12, F=15,
+                         b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+
+    dt = t[1] - t[0]
+    def this_LM3_coar(X, t):
+        Z_index = int(np.floor(t / dt))
+        print(Z_index)
+        dXdt = LM3_coar(X, Z[:, Z_index], coarse=coarse, K=K,
+                        I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dXdt
+    X = integrate.odeint(this_LM3_coar, X0, t)
+    X = X.T
+    return X
+
+
+def return_LM3_coar_ens_data(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+
+    N_t = t.size
+    N_Xc, N_eXc = X0_ens.shape
+    N_Z, N_eZ, N_Zt = Z0_ens_ts.shape
+    N_eXpZ = N_eXc // N_eZ
+
+    X_ens = np.ones([N_Xc, N_eXc, N_t])
+
+    for ens_count in range(N_eZ):
+
+        def this_LM3_coar(X_ens_ravel, t):
+            Z_index = int(np.floor(t/dt))
+            X_ens = X_ens_ravel.reshape(N_Xc, N_eXpZ)
+            dXdt = LM3_coar(X_ens,
+                            Z0_ens_ts[:, ens_count, Z_index][:, None],
+                            coarse=coarse,
+                            K=K, I=I, F=F,
+                            b=b, c=c,
+                            alpha=alpha, beta=beta)
+            return dXdt.ravel()
+
+        this_slice = slice(ens_count*N_eXpZ, (ens_count+1)*N_eXpZ)
+        aX_ens = integrate.odeint(this_LM3_coar, X0_ens[:, this_slice].ravel(), t)
+        aX_ens = aX_ens.T
+        aX_ens = aX_ens.reshape(N_Xc, N_eXpZ, N_t)
+        X_ens[:, this_slice, :] = aX_ens
+    return X_ens
