@@ -396,14 +396,30 @@ def upscale_on_loop(Zc, coarse):
     return Z
 
 
-def interp_on_loop(Z, x, x_interp, x_max=None):
+def interp_on_loop(Z, x, x_interp, x_max=None, kind='quadratic'):
     if x_max is None:
         x_max = x_interp.max()
     Z = np.concatenate([Z, [Z[0]]])
     x = np.concatenate([x, [x_max + 1 + x[0]]])
-    f = interpolate.interp1d(x, Z, kind='quadratic')
+    if x[0] != x_interp[0]:
+        Z = np.concatenate([[Z[-1]], Z])
+        x = np.concatenate([[0], x])
+    f = interpolate.interp1d(x, Z, kind=kind, axis=0)
     Z_interp = f(x_interp)
     return Z_interp
+
+
+def lin_interp_matrix(N, coarse):
+    N_c = N // coarse
+    col1 = 1 - np.abs(np.linspace(-1 + 1/coarse, 1, coarse*2))
+    N_zeros = (N_c - 2) * coarse
+    if N_zeros != 0:
+        col1 = np.concatenate([col1, np.zeros(N_zeros)])
+    col1 = np.roll(col1, 1 - coarse)
+    M = np.zeros([col1.size, N_c])
+    for jj in range(N_c):
+        M[:, jj] = np.roll(col1, coarse * jj)
+    return M
 
 
 def return_LM3_ens_data(Z0_ens, t, K=32, I=12, F=15,

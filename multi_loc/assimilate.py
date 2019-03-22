@@ -580,6 +580,7 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
                     a=None, rho=None,
                     rho_coar=None,
                     use_SVD_loc=True,
+                    use_sample_var=True,
                     use_P_X=False):
 
     X_ens = X_ens_input.copy()
@@ -602,24 +603,33 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
     if rho is not None:
         P_Z *= rho
     if use_SVD_loc:
+        # D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_X)))
+        # C_X = D_inv_sqrt @ P_X @ D_inv_sqrt
+        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z)))
+        C_Z = D_inv_sqrt @ P_Z @ D_inv_sqrt
         trans_mats = transformation_matrices(
             H_sub, P=P_X,
             R=R_sub)
         VT_X = trans_mats['VT']
         VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
-        P_Z_ll_X = (VT_X_interp.T
-                    @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
-                    @ VT_X_interp)
-        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z_ll_X)))
-        rho_Z_ll_X = D_inv_sqrt @ P_Z_ll_X @ D_inv_sqrt
-        P_Z_orth_X = P_Z - P_Z_ll_X
+        P_Z_ll = (VT_X_interp.T
+                  @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
+                  @ VT_X_interp)
+        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z_ll)))
+        C_Z_ll = D_inv_sqrt @ P_Z_ll @ D_inv_sqrt
+        C_Z_orth = C_Z - C_Z_ll
         if rho_coar is not None:
-            P_Z_orth_X_loc = rho_coar * P_Z_orth_X
+            C_Z_orth = rho_coar * C_Z_orth
         else:
-            P_Z_orth_X_loc = rho_Z_ll_X**10 * P_Z_orth_X
-        # P_Z_orth_X_loc *= 0
-        P_Z_loc = P_Z_ll_X + P_Z_orth_X_loc
-        P_Z = P_Z_loc
+            C_Z_orth = C_Z_ll * C_Z_orth
+        C_Z = C_Z_ll + C_Z_orth
+        # use sample variances as the variances
+        if use_sample_var:
+            D_sqrt = np.diag(np.sqrt(np.diag(P_Z)))
+        else:
+            D_sqrt = np.daig(np.sqrt(np.diag(P_Z_ll)))
+        P_Z = D_sqrt @ C_Z @ D_sqrt
+
     if use_P_X:
         trans_mats = transformation_matrices(
             H_sub, P=P_X,
@@ -628,27 +638,6 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
         S_X = trans_mats['S']
         VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
         P_Z = VT_X_interp.T @ S_X**2 @ VT_X_interp * coarse
-
-    import matplotlib.pyplot as plt
-    plt.figure()
-    im = plt.imshow(P_Z)
-    plt.colorbar(im)
-    plt.title('P_Z_loc')
-
-    plt.figure()
-    im = plt.imshow(P_Z_loc)
-    plt.colorbar(im)
-    plt.title('P_Z_loc')
-
-    plt.figure()
-    im = plt.imshow(P_Z_orth_X)
-    plt.colorbar(im)
-    plt.title('P_Z_orth')
-
-    plt.figure()
-    im = plt.imshow(P_Z_orth_X_loc)
-    plt.colorbar(im)
-    plt.title('P_Z_orth_X_loc')
 
     temp1 = (R + H.dot(P_Z.dot(H.T))).T
     temp2 = H.dot(P_Z.T)
