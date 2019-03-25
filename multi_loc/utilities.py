@@ -306,13 +306,27 @@ def LM3(Z, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
     return dZdt
 
 
-def window_sum_Z(Z,*, I, alpha, beta):
+def Z_sum_weights(I, alpha, beta):
     weights = np.abs(np.arange(-I, I + 1, dtype=float))
     weights = alpha - beta * weights
     weights[0] *= 1/2
     weights[-1] *= 1/2
+    return weights
+
+
+def window_sum_Z(Z,*, I, alpha, beta):
+    weights = Z_sum_weights(I, alpha, beta)
     X = ndimage.convolve1d(Z, weights, mode='wrap', axis=0)
     return X
+
+
+def window_sum_Z_matrix(N_Z, *, I, alpha, beta):
+    weights = Z_sum_weights(I, alpha, beta)
+    row1 = np.zeros(N_Z)
+    row1[:weights.size] = weights
+    row1 = np.roll(row1, -I)
+    matrix = sp.linalg.circulant(row1).T
+    return matrix
 
 
 def bracket(XY, K):

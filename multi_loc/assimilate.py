@@ -573,22 +573,16 @@ def trans_assim_trials(*, mu, H, ens_size, assim_num,
     return to_return
 
 
-def dual_scale_enkf(X_ens_input, Z_ens_input,
-                    X_obs_input, Z_obs_input,
-                    *, H, R, R_coar,
+def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
+                    Z_ens, Z_obs, H_Z, R_Z,
                     H_sub, R_sub, coarse,
                     a=None, rho=None,
                     rho_coar=None,
                     use_SVD_loc=True,
                     use_sample_var=True,
                     use_P_X=False):
-
-    X_ens = X_ens_input.copy()
-    Z_ens = Z_ens_input.copy()
-    Z_obs = Z_obs_input.copy()
-    X_obs = X_obs_input.copy()
     N_Z, N_eZ = Z_ens.shape
-    N_X, N_eX = X_ens_input.shape
+    N_X, N_eX = X_ens.shape
 
     P_X = np.cov(X_ens)
 
@@ -603,8 +597,6 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
     if rho is not None:
         P_Z *= rho
     if use_SVD_loc:
-        # D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_X)))
-        # C_X = D_inv_sqrt @ P_X @ D_inv_sqrt
         D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z)))
         C_Z = D_inv_sqrt @ P_Z @ D_inv_sqrt
         trans_mats = transformation_matrices(
@@ -630,6 +622,40 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
             D_sqrt = np.daig(np.sqrt(np.diag(P_Z_ll)))
         P_Z = D_sqrt @ C_Z @ D_sqrt
 
+
+        ## delete
+        import matplotlib.pyplot as plt
+
+        P_Z_sample = np.cov(Z_ens)
+
+        plt.figure()
+        im = plt.imshow(P_Z)
+        plt.colorbar(im)
+        plt.title('P_Z')
+
+        adiff = P_Z - P_Z_sample
+        vmax = np.abs(adiff).max()
+        plt.figure()
+        im = plt.imshow(P_Z - P_Z_sample,
+                        vmax=vmax, vmin=-vmax, cmap='bwr')
+        plt.colorbar(im)
+        plt.title('P_Z - P_Z_sample')
+
+        plt.figure()
+        im = plt.imshow(C_Z)
+        plt.colorbar(im)
+        plt.title('C_Z')
+
+        plt.figure()
+        im = plt.imshow(C_Z_orth)
+        plt.colorbar(im)
+        plt.title('C_Z_orth')
+
+        plt.figure()
+        im = plt.imshow(C_Z_ll)
+        plt.colorbar(im)
+        plt.title('C_Z_ll')
+        ## delete
     if use_P_X:
         trans_mats = transformation_matrices(
             H_sub, P=P_X,
@@ -639,16 +665,16 @@ def dual_scale_enkf(X_ens_input, Z_ens_input,
         VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
         P_Z = VT_X_interp.T @ S_X**2 @ VT_X_interp * coarse
 
-    temp1 = (R + H.dot(P_Z.dot(H.T))).T
-    temp2 = H.dot(P_Z.T)
+    temp1 = (R_Z + H_Z.dot(P_Z.dot(H_Z.T))).T
+    temp2 = H_Z.dot(P_Z.T)
     K = np.linalg.solve(temp1, temp2).T
-    Z_obs_ens = np.random.multivariate_normal(Z_obs, R, N_eZ).T
+    Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
 
-    Z_ens = Z_ens + K @ (Z_obs_ens - H @ Z_ens)
+    Z_ens_a = Z_ens + K @ (Z_obs_ens - H_Z @ Z_ens)
 
     # update X
-    K = P_X @ np.linalg.inv(P_X + R_coar)
-    X_obs_ens = np.random.multivariate_normal(X_obs, R_coar, N_eX).T
-    X_ens = X_ens + K @ (X_obs_ens - X_ens)
+    K = P_X @ np.linalg.inv(P_X + R_X)
+    X_obs_ens = np.random.multivariate_normal(X_obs, R_X, N_eX).T
+    X_ens_a = X_ens + K @ (X_obs_ens - X_ens)
 
-    return X_ens, Z_ens
+    return X_ens_a, Z_ens_a
