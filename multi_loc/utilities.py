@@ -509,6 +509,7 @@ def return_LM3_coar_ens_data(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b
         beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
 
     N_t = t.size
+    dt = t[1] - t[0]
     N_Xc, N_eXc = X0_ens.shape
     N_Z, N_eZ, N_Zt = Z0_ens_ts.shape
     N_eXpZ = N_eXc // N_eZ

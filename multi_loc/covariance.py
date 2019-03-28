@@ -541,7 +541,6 @@ def generate_circulant_old(rho, rho0, correlation_fun, nu=None, return_eig=True,
         to_return = Corr
     elif return_eig:
         to_return = (eig_val, eig_vec)
-
     return to_return
 
 
