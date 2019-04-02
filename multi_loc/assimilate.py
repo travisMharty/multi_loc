@@ -578,53 +578,84 @@ def trans_assim_trials(*, mu, H, ens_size, assim_num,
 def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
                     Z_ens, Z_obs, H_Z, R_Z,
                     H_sub, R_sub, coarse,
-                    a=None, rho=None,
-                    rho_coar=None,
+                    a=None,
+                    rho_Zf=None,
+                    rho_Zc=None,
                     assim_type=None,
+                    sig_fraction=0.99,
                     use_sample_var=True,
                     return_details=False):
     N_Z, N_eZ = Z_ens.shape
     N_X, N_eX = X_ens.shape
 
     P_X = np.cov(X_ens)
-
-    # update Z
     P_Z = np.cov(Z_ens)
+    C_X = np.corrcoef(X_ens)
+    C_Z = np.corrcoef(Z_ens)
+    if return_details:
+        details = {}
+        details['P_X_sample'] = P_X.copy()
+        details['P_Z_sample'] = P_Z.copy()
+        details['C_X_sample'] = C_X.copy()
+        details['C_Z_sample'] = C_Z.copy()
+    # update Z
+
     if assim_type == 'SVD_loc':
-        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z)))
-        C_Z = D_inv_sqrt @ P_Z @ D_inv_sqrt
         trans_mats = transformation_matrices(
-            H_sub, P=P_X,
+            H_sub, P=C_X,
             R=R_sub)
         VT_X = trans_mats['VT']
-        VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
-        P_Z_ll = (VT_X_interp.T
-                  @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
+        s_X = np.diag(trans_mats['S'])
+        s_frac = s_X.cumsum()/s_X.sum()
+        sig_num = (s_frac <= sig_fraction).sum()
+
+        VT_X_interp = utilities.upscale_on_loop(VT_X[:sig_num], coarse)
+        VT_X_interp, temp = np.linalg.qr(VT_X_interp.T)
+        VT_X_interp = VT_X_interp.T
+        # P_Z_ll = (VT_X_interp.T
+        #           @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
+        #           @ VT_X_interp)
+        # D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z_ll)))
+        # C_Z_ll = D_inv_sqrt @ P_Z_ll @ D_inv_sqrt
+        C_Z_ll = (VT_X_interp.T
+                  @ np.diag(np.diag(VT_X_interp @ C_Z @ VT_X_interp.T))
                   @ VT_X_interp)
-        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z_ll)))
-        C_Z_ll = D_inv_sqrt @ P_Z_ll @ D_inv_sqrt
+        D_inv_sqrt = np.diag(1/np.sqrt(np.diag(C_Z_ll)))
+        C_Z_ll = D_inv_sqrt @ C_Z_ll @ D_inv_sqrt
+        if rho_Zc is not None:
+            C_Z_ll = rho_Zc * C_Z_ll
+
         C_Z_orth = C_Z - C_Z_ll
-        if rho_coar is not None:
-            C_Z_orth = rho_coar * C_Z_orth
+        if rho_Zf is not None:
+            C_Z_orth = rho_Zf * C_Z_orth
         else:
             C_Z_orth = C_Z_ll * C_Z_orth
+
         if return_details:
-            details = {'P_Z_sample': P_Z,
-                       'C_Z_sample': C_Z,
-                       'C_Z_ll': C_Z_ll,
-                       'C_Z_orth': C_Z_orth,
-                       'VT_X': VT_X,
-                       'VT_X_interp': VT_X_interp}
+            details['C_Z_ll'] = C_Z_ll.copy()
+            details['C_Z_orth'] = C_Z_orth.copy()
+            details['VT_X'] = VT_X.copy()
+            details['VT_X_interp'] = VT_X_interp.copy()
         C_Z = C_Z_ll + C_Z_orth
+
+        # not a good workaround
+        u, s, vt = np.linalg.svd(C_Z)
+        C_Z = u @ np.diag(s.clip(min=1e-1)) @ vt
+
         # use sample variances as the variances
         if use_sample_var:
             D_sqrt = np.diag(np.sqrt(np.diag(P_Z)))
         else:
+            P_Z_ll = (VT_X_interp.T
+                      @ np.diag(np.diag(VT_X_interp @ P_Z @ VT_X_interp.T))
+                      @ VT_X_interp)
             D_sqrt = np.daig(np.sqrt(np.diag(P_Z_ll)))
+
         P_Z = D_sqrt @ C_Z @ D_sqrt
+        P_Z = 0.5 * (P_Z + P_Z.T)
         if return_details:
-            details['C_Z_loc'] = C_Z
-            details['P_Z_loc'] = P_Z
+            details['C_Z_loc'] = C_Z.copy()
+            details['P_Z_loc'] = P_Z.copy()
     elif assim_type == 'corr_diff':
         trans_mats = transformation_matrices(
             H_sub, P=P_X,
@@ -638,9 +669,8 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
         D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z)))
         C_Z = D_inv_sqrt @ P_Z @ D_inv_sqrt
         C_Z_orth = C_Z - C_Xf
-        if rho_coar is not None:
-            print('rho_coar')
-            C_Z_orth = rho_coar * C_Z_orth
+        if rho_Zf is not None:
+            C_Z_orth = rho_Zf * C_Z_orth
         else:
             C_Z_orth = C_Xf * C_Z_orth
         C_Z = C_Xf + C_Z_orth
@@ -659,20 +689,32 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
         VT_X_interp = utilities.upscale_on_loop(VT_X, coarse)
         P_Z = VT_X_interp.T @ S_X**2 @ VT_X_interp * coarse
     elif assim_type == 'standard loc':
-            if a is not None:
-                P_Z *= (1 + a)
-                mu_Z = np.mean(Z_ens, axis=-1)
-                Z_ens -= mu_Z[:, None]
-                Z_ens *= np.sqrt(1 + a)
-                Z_ens += mu_Z[:, None]
-            if rho is not None:
-                P_Z *= rho
+        if a is not None:
+            P_Z *= (1 + a)
+            mu_Z = np.mean(Z_ens, axis=-1)
+            Z_ens -= mu_Z[:, None]
+            Z_ens *= np.sqrt(1 + a)
+            Z_ens += mu_Z[:, None]
+        if rho_Zc is not None:
+            P_Z *= rho_Zc
+        if return_details:
+            details['P_Z_loc'] = P_Z.copy()
+            D_inv_sqrt = np.diag(1/np.sqrt(np.diag(P_Z)))
+            details['C_Z_loc'] = D_inv_sqrt @ P_Z @ D_inv_sqrt
     else:
         print('assim_type is required')
         return None
     temp1 = (R_Z + H_Z @ P_Z @ (H_Z.T)).T
+
+    if np.linalg.cond(temp1) > 600:
+        u, s, vh = np.linalg.svd(temp1)
+        s_min = s[0]/600
+        temp1 = u @ np.diag(s.clip(s_min)) @ vh
+
     temp2 = H_Z @ (P_Z.T)
     K = np.linalg.solve(temp1, temp2).T
+    if return_details:
+        details['K_Z'] = K.copy()
     # K = P_Z @ H_Z.T @ np.linalg.inv(H_Z @ P_Z @ H_Z.T + R_Z)
     Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
 
@@ -682,6 +724,8 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
     temp1 = (R_X + H_X @ P_X @ (H_X.T)).T
     temp2 = H_X @ (P_X.T)
     K = np.linalg.solve(temp1, temp2).T
+    if return_details:
+        details['K_X'] = K.copy()
     # K = P_X @ H_X @ np.linalg.inv(H_X @ P_X @ H_X.T + R_X)
     X_obs_ens = np.random.multivariate_normal(X_obs, R_X, N_eX).T
     X_ens_a = X_ens + K @ (X_obs_ens - H_X @ X_ens)
@@ -694,7 +738,7 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
 
 def cycle_KF_LM3(*, X0_ens, Z0_ens, X_obs_ts, Z_obs_ts, dt,
                  R_X, R_Z, H_X, H_Z, coarse,
-                 rho_coar=None, H_sub=None, R_sub=None,
+                 rho_Zc=None, rho_Zf=None, H_sub=None, R_sub=None,
                  assim_type=None):
     Xa_ens_ts = []
     Za_ens_ts = []
@@ -713,9 +757,10 @@ def cycle_KF_LM3(*, X0_ens, Z0_ens, X_obs_ts, Z_obs_ts, dt,
             X_ens=X0_ens, X_obs=X_obs_ts.sel(time=at).values,
             H_X=H_X, R_X=R_X,
             H_sub=H_sub, R_sub=R_sub, coarse=coarse,
-            rho_coar=rho_coar,
+            rho_Zc=rho_Zc, rho_Zf=rho_Zf,
             Z_ens=Z0_ens, Z_obs=Z_obs_ts.sel(time=at).values,
-            H_Z=H_Z, R_Z=R_Z,)
+            H_Z=H_Z, R_Z=R_Z, return_details=False,
+            assim_type=assim_type)
         print('assimed')
 
         temp_Za_ts = utilities.return_LM3_ens_data(

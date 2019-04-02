@@ -400,7 +400,7 @@ def generate_X_Z_LM3_ens(Z_ts, N_eX, N_eZ, coarse, I, alpha, beta):
 
 
 def upscale_on_loop(Zc, coarse):
-    N_Z = Zc.shape[0] * coarse
+    N_Z = Zc.shape[1] * coarse
     x = np.arange(N_Z)
     xc = x[::coarse]
     xc = np.concatenate([xc, [xc[-1] + coarse]])
