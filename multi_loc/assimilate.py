@@ -584,7 +584,8 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
                     assim_type=None,
                     sig_fraction=0.99,
                     use_sample_var=True,
-                    return_details=False):
+                    return_details=False,
+                    max_cond=100):
     N_Z, N_eZ = Z_ens.shape
     N_X, N_eX = X_ens.shape
 
@@ -706,9 +707,9 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
         return None
     temp1 = (R_Z + H_Z @ P_Z @ (H_Z.T)).T
 
-    if np.linalg.cond(temp1) > 600:
+    if np.linalg.cond(temp1) > max_cond:
         u, s, vh = np.linalg.svd(temp1)
-        s_min = s[0]/600
+        s_min = s[0] / max_cond
         temp1 = u @ np.diag(s.clip(s_min)) @ vh
 
     temp2 = H_Z @ (P_Z.T)
