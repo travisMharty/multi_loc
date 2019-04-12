@@ -639,9 +639,9 @@ def dual_scale_enkf(*, X_ens, X_obs, H_X, R_X,
             details['VT_X_interp'] = VT_X_interp.copy()
         C_Z = C_Z_ll + C_Z_orth
 
-        # not a good workaround
-        u, s, vt = np.linalg.svd(C_Z)
-        C_Z = u @ np.diag(s.clip(min=1e-1)) @ vt
+        # # not a good workaround
+        # u, s, vt = np.linalg.svd(C_Z)
+        # C_Z = u @ np.diag(s.clip(min=1e-1)) @ vt
 
         # use sample variances as the variances
         if use_sample_var:
