@@ -422,7 +422,6 @@ def interp_on_loop(Z, x, x_interp, x_max=None, kind='quadratic'):
     Z_interp = f(x_interp)
     return Z_interp
 
-
 def lin_interp_matrix(N, coarse):
     N_c = N // coarse
     col1 = 1 - np.abs(np.linspace(-1 + 1/coarse, 1, coarse*2))
