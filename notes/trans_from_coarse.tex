@@ -1,0 +1,380 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+% This is a simple template for a LaTeX document using the "article" class.
+% See "book", "report", "letter" for other types of document.
+
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+
+%%% Examples of Article customizations
+% These packages are optional, depending whether you want the features they provide.
+% See the LaTeX Companion or other references for full information.
+
+%%% PAGE DIMENSIONS
+\usepackage{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+% \geometry{margin=2in} % for example, change the margins to 2 inches all round
+% \geometry{landscape} % set up the page for landscape
+%   read geometry.pdf for detailed page layout information
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+% \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{booktabs} % for much better looking tables
+\usepackage{array} % for better arrays (eg matrices) in maths
+\usepackage{paralist} % very flexible & customisable lists (eg. enumerate/itemize, etc.)
+\usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
+\usepackage{subfig} % make it possible to include more than one captioned figure/table in a single float
+% These packages are all incorporated in the memoir class to one degree or another...
+
+%%% HEADERS & FOOTERS
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0pt} % customise the layout...
+\lhead{}\chead{}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+\allsectionsfont{\sffamily\mdseries\upshape} % (See the fntguide.pdf for font help)
+% (This matches ConTeXt defaults)
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+\usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
+\renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
+\renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+
+
+
+%%% This is all Custom
+\usepackage{amsmath}
+\DeclareMathOperator{\interp}{interp}
+\DeclareMathOperator{\QR}{QR}
+\DeclareMathOperator{\sd}{sd}
+\newcommand{\mat}{\mathbf}
+
+%%% END Article customizations
+
+%%% The "real" document content comes below...
+
+\title{Singular values of covariance matrices under localization}
+\author{Travis Harty}
+\date{} % Activate to display a given date or no date (if empty),
+         % otherwise the current date is printed
+
+\begin{document}
+\maketitle
+
+\section{Optimal linear transform}
+
+We update our state $x\sim N(\mu, \mat{P})$ using observation
+$y = \mat{H} \mu + \epsilon$, where $\epsilon \sim N(0, \mat{R})$,
+$\dim{x} = N_x$, and $\dim{y} = N_y$.
+We will perform this update by first transforming our variables using
+linear transformations $\mat{T}_x$ and $\mat{T}_y$ for $x$ and $y$ respectively
+such that $\mat{T}_x x = \tilde{x} \sim N(\tilde{\mu}, \mat{I})$ and
+$\mat{T}_y y = \tilde{y} = \mat{\Sigma} \tilde{\mu} + \tilde{\epsilon}$, where
+$\mat{\Sigma}$ is diagonal, and $\tilde{\epsilon} \sim N(0, \mat{I})$.
+
+Take,
+\[
+  x' = \mat{P}^{-1/2} x
+  \text{ and }
+  y' = \mat{R}^{-1/2} y.
+\]
+We then have,
+\[
+  y = \mat{H} \mu + \epsilon
+\]
+\[
+  \mat{R}^{1/2} y' = \mat{H}
+  \mat{P}^{1/2} \mu' + \epsilon
+\]
+\[
+  y' = \mat{R}^{-1/2}\mat{H}
+  \mat{P}^{1/2} \mu' + \epsilon',
+\]
+where $\epsilon \sim N(0, \mat{I})$.
+We can then take the singular value decomposition of
+$\mat{R}^{-1/2} \mat{H} \mat{P}^{1/2}$ yielding,
+\[
+  y' = \mat{U} \mat{\Sigma} \mat{V}^{T} \mu' + \epsilon'
+\]
+\[
+  \mat{U}^T y' = \mat{\Sigma} (\mat{V}^T \mu') + \tilde{\epsilon}
+\]
+\[
+  \tilde{y}= \mat{\Sigma} \tilde{\mu} + \tilde{\epsilon}
+\]
+where $\mat{\Sigma}$ is diagonal and $\tilde{\epsilon} \sim N(0,
+\mat{I})$.
+We have $\mat{T}_x = \mat{V}^T \mat{P}^{-1/2}$ and
+$\mat{T}_y = \mat{U}^T \mat{R}^{-1/2}$.
+
+
+
+
+
+\section{Dimension reduction optimal linear transform}
+
+We again update our state $x \sim N(\mu, \mat{P})$ with
+observations $y = \mat{H} x + \epsilon$, where $\epsilon \sim N(0,
+\mat{R})$.
+We will now calculate
+\[
+  \mat{P} = \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T
+  \text{ and }
+  \mat{R} = \mat{Q}_y \mat{\Lambda}_y \mat{Q}_y^T
+\]
+and choose $N_{\lambda_x}$ and $N_{\lambda_y}$ that are the number of
+eigenvalues to keep for $P$ and $R$ respectively such that,
+\[
+  \dim(\mat{Q}_x) = (N_x, N_{\lambda_x})\text{; }\dim(\mat{\Lambda}_x) =
+  (N_{\lambda_x}, N_{\lambda_x})
+\]
+\[
+  \text{ and }
+\]
+\[
+  \dim(\mat{Q}_y) = (N_y, N_{\lambda_y})\text{; }\dim(\mat{\Lambda}_y) =
+  (N_{\lambda_y}, N_{\lambda_y})
+\]
+
+We can then repeat the above calculations while reducing the
+transformed variables' dimensions.
+Take,
+\[
+  x' = \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T x
+  \text{ and }
+  y' = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T y
+\]
+Note that we have,
+\[
+  x \approx \mat{Q}_x \math{\Lambda}_x^{1/2} x'
+\]
+\[
+  y \approx \mat{Q}_y \math{\Lambda}_y^{1/2} y'
+\]
+where there is equality when $N_{\lambda_x}$ ($N_{\lambda_y}$) is the
+true rank of $\mat{P}$ ($\mat{R}$).
+
+Assuming that $N_{\lambda_x}$ and $N_{\lambda_y}$ are the ranks of $P$
+and $R$ respectively, we have,
+\[
+  y = \mat{H} \mu + \epsilon
+\]
+\[
+  \mat{Q}_y \mat{\Lambda}_y^{1/2} y' = \mat{H}
+  \mat{Q}_x \mat{\Lambda}_x^{1/2} \mu' + \epsilon
+\]
+\[
+  y' = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T \mat{H}
+  \mat{Q}_x \mat{\Lambda}_x^{1/2} \mu' + \epsilon',
+\]
+where $\epsilon' \sim N(0, \mat{I}_{N_{\lambda_y}})$.
+We can then take the singular value decomposition of
+$\mat{\Lambda}_y^{-1/2} \mat{Q}_y^T \mat{H} \mat{Q}_x
+\mat{\Lambda}_x^{1/2}$ yielding,
+\[
+  y' = \mat{U} \mat{\Sigma} \mat{V}^{T} \mu' + \epsilon'
+\]
+\[
+  \mat{U}^T y' = \mat{\Sigma} (\mat{V}^T \mu') + \tilde{\epsilon}
+\]
+\[
+  \tilde{y}= \mat{\Sigma} \tilde{\mu} + \tilde{\epsilon}
+\]
+where $\mat{\Sigma}$ is diagonal and $\tilde{\epsilon} \sim N(0,
+\mat{I}_{N_{\lambda_y}})$.
+We have $\mat{T}_x = \mat{V}^T \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T$ and
+$\mat{T}_y = \mat{U}^T \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T$.
+Note that we have,
+\[
+  \mat{T}_x \mat{T}_x^{-R} = \mat{V}^T \mat{\Lambda}_x^{-1/2}
+  \mat{Q}_x^T \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V} = \mat{I}_{N_{\lambda_x}},
+\]
+but there is no left inverse.
+
+\section{Equivalence to standard KF}
+
+Sticking with the above notation, we can calculate the standard Kalman
+filter update and the corresponding equations:
+\[
+  \mat{K} = \mat{P}\mat{H}^T (\mat{H} \mat{P} \mat{H}^T + \mat{R})^{-1},
+\]
+\[
+  x^a = x + \mat{K} (y - \mat{H} x),
+\]
+\[
+  \mat{P}^a = (\mat{I} - \mat{K} \mat{H}) \mat{P}.
+\]
+Alternatively, in terms of our transformed equations, we have:
+\[
+  \mat{K}' = \mat{I_x} \mat{\Sigma}^T ( \mat{\Sigma} \mat{I_x}
+  \mat{\Sigma} + \mat{I_y})^{-1} = \mat{\Sigma}^T (\mat{\Sigma}
+  \mat{\Sigma}^T + \mat{I_y})^{-1}
+\]
+\[
+  x^a' = x' + \mat{K}'(y' + \mat{\Sigma} x')
+\]
+\[
+  \mat{P}^a' = (\mat{I} - \mat{K}' \mat{\Sigma}) \mat{P}'
+\]
+For the sake of greater generality take
+
+
+
+
+\section{Transformation from coarse}
+
+
+
+We have two ensembles representing the same system.
+The ensemble $X$ is a coarse representation of the state, but has many ensemble members.
+The ensemble $Z$ is a fine representation of the sates, but has few ensemble members.
+\[
+\dim{X} = N_x, N_{ex}
+\]
+\[
+\dim{Z} = N_z, N_{ez}
+\]
+
+In order to find the eigenvalues and eigenvectors of the sample correlation of $X$, we take the singular value decomposition of $\tilde{X} = {(N_{ex} - 1)}^{-1/2} (X - \bar{X})/ \sd(X)$, where $\sd(X)$ is the standard deviation of each element of $X$.
+\[
+U_x S_x V_x^T = \tilde{X}
+\]
+This means that,
+\[
+U_x S_z^2 U_x^T = \hat{C}_x
+\]
+where $\hat{C}_x$ is the sample correlation of $X$.
+
+We want to then use $U_x$, or its leading columns, to estimate the leading $U_z$.
+To do this, we interpolate $U_x$ to the $z$ space and then use QR factorization to ensure the interpolated $u_x$'s are orthonormal:
+\[
+U_{x} = \interp (U_x)
+\]
+\[
+U_{xi}, R = \QR (U_{xi}).
+\]
+We then must choose how many of the columns of $U_{xi}$ should be used.
+The best way to make this choice is unclear.
+A few ways that I am considering are:
+\begin{enumerate}
+\item Keep $U_{xi}$ based on the cumulative sum of their corresponding eigenvalues.
+\item Keep $U_{xi}$ based on the rate of change of their corresponding eigenvalues.
+\item Keep $U_{xi}$ based on some measure of the length scale produced by the low rank approximation of $\hat{C}_x$ and the residual.
+\item Keep $U_{xi}$ based on how orthogonal the interpolated vector is in $z$ space before orthogonalization.
+\end{enumerate}
+It should be noted that keeping all columns can be detrimental to the assimilation process.
+If some of the columns of $U_{xi}$ are representing small scale structures, then in the following steps they will still be used to represent some of these small scale structures.
+
+After choosing which columns of $U_{xi}$ to keep, we must determine what eigenvalues they should have.
+We do this by taking $\lambda = u_{xi}^T \hat{C}_z u_{xi}$ as the eigenvalue of $u{xi}$ for our approximation of $C_z$.
+Alternatively, we can take $\lambda = {(\tilde{Z}^T u_{xi})}^T (\tilde{Z}^T u_{xi})$ where $\tilde{Z}$ is defined similarly as $\tilde{X}$.
+This will give us the leading eigenvectors and an approximation of their eigenvalues of $C_Z$.
+
+These eigenvectors and eigenvalues represent the large scale structure of the problem.
+To then find the small scales of the problem, we take
+\[
+C_z^\bot = C_z^\parallel - \hat{C}_z
+\]
+where
+\[
+C_z^\parallel = U_{xi} \Lambda_{xi}  U_{xi}^T
+\]
+and $\Lambda_{xi}$ is the diagonal matrix with the $\lambda$s described above on the diagonal.
+We can then localize $C_z^\bot$ to get at the small scales that are represented in $Z$.
+
+We must choose how to localize $C_z^\bot$.
+One reasonable expectation is that the scales in $C_z^\bot$ will be shorter or similar to $N_z/N_x$.
+This choice will also be affected by the choice of how many columns of $U_{xi}$ to keep.
+Once the localization matrix $L$ is chosen, we can then generate our localized correlation matrix as:
+\[
+C_z^{loc} = C_z^\parallel + L \circ C_Z^\bot
+\]
+and the corresponding covariance matrix as:
+\[
+P_z^{loc} = D_z C_z^{loc} D_z.
+\]
+where $D_z$ is the diagonal matrix with sample standard deviations of $Z$ on the diagonal.
+
+We can then find the leading eigenvectors and eigenvalues of $C_z^{loc}$:
+\[
+Q \Lambda Q^T = C_z^{loc}
+\]
+and use them to transform the $z$ variable.
+First, we must calculate a whitening transformation
+\[
+T_w = \Lambda^{-1/2} Q^T
+\]
+and its right inverse
+\[
+T_w^i = Q \Lambda^{1/2}
+\]
+and the singular value decomposition
+\[
+U \Sigma V^T = R^{-1/2} H T_w^i.
+\]
+We can then define transformations for both $z$ and $y$
+\[
+T_z = V^T T_w
+\]
+\[
+T_y = U^T R^{-1/2}
+\]
+
+We then know $z^* = T_z z$ and $y^* = T_y y$ have identity covariance matrices and
+\[
+y^* = \Sigma z^* + \epsilon^*
+\]
+\[
+U^T R^{-1/2} y = \Sigma V^T \Lambda^{-1/2} Q^T z + \epsilon^*
+\]
+\[
+y = R^{1/2} U \Sigma V^T \Lambda^{-1/2} Q^T z  + \epsilon
+\]
+\[
+y = R^{1/2}R^{-1/2} H Q \Lambda^{1/2} \Lambda^{-1/2} Q^T z  + \epsilon
+\]
+\[
+y = H z  + \epsilon
+\]
+The question is: can I do this better?
+Specifically:
+\begin{enumerate}
+\item Can I calculate the eigenvectors and values of $C^{loc}$ without generating $C^\parallel$ or $C^\bot$ explicitly?
+\item Can I calculate the eigenvectors and values of $P$ from those of $C$ without generating $C$?
+\item Can I calculate the singular vectors and values of $R^{-1/2} H T_w^i$ from the singular value decomposition of $R$, $H$, and $T_w^i$?
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
