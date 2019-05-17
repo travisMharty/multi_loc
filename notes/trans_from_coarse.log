@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  15 MAY 2019 18:48
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  16 MAY 2019 17:13
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -401,33 +401,6 @@ Package caption Info: End \AtBeginDocument code.
 [1
 
 {/opt/local/var/db/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-
-./trans_from_coarse.tex:158: LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.158   x \approx \mat{Q}_x \math
-                                 {\Lambda}_x^{1/2} x'
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-
-./trans_from_coarse.tex:161: LaTeX Error: Bad math environment delimiter.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.161   y \approx \mat{Q}_y \math
-                                 {\Lambda}_y^{1/2} y'
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-
 Overfull \hbox (33.16342pt too wide) in paragraph at lines 178--183
 \OT1/cmr/m/n/10.95 where $\OML/cmm/m/it/10.95 ^^O[] \OMS/cmsy/m/n/10.95 ^^X \OM
 L/cmm/m/it/10.95 N\OT1/cmr/m/n/10.95 (0\OML/cmm/m/it/10.95 ; \OT1/cmr/bx/n/10.9
@@ -435,21 +408,7 @@ L/cmm/m/it/10.95 N\OT1/cmr/m/n/10.95 (0\OML/cmm/m/it/10.95 ; \OT1/cmr/bx/n/10.9
 tion of $\OT1/cmr/bx/n/10.95 ^^C[]Q[]HQ[]^^C[]$
  []
 
-./trans_from_coarse.tex:223: Double superscript.
-<recently read> ^
-                 
-l.223   x^a'
-             = x' + \mat{K}'(y' + \mat{\Sigma} x')
-I treat `x^1^2' essentially like `x^1{}^2'.
-
-./trans_from_coarse.tex:226: Double superscript.
-<recently read> ^
-                 
-l.226   \mat{P}^a'
-                   = (\mat{I} - \mat{K}' \mat{\Sigma}) \mat{P}'
-I treat `x^1^2' essentially like `x^1{}^2'.
-
-[2] [3] [4] [5] (./trans_from_coarse.aux) ) 
+[2] [3] (./trans_from_coarse.aux) ) 
 Here is how much of TeX's memory you used:
  4582 strings out of 493762
  68272 string characters out of 6152599
@@ -457,23 +416,23 @@ Here is how much of TeX's memory you used:
  8229 multiletter control sequences out of 15000+600000
  10624 words of font info for 38 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 44i,11n,43p,285b,262s stack positions out of 5000i,500n,10000p,200000b,80000s
-</opt/local/share/texmf-texlive/font
-s/type1/public/amsfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/typ
-e1/public/amsfonts/cm/cmbx8.pfb></opt/local/share/texmf-texlive/fonts/type1/pub
-lic/amsfonts/cm/cmmi10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/a
-msfonts/cm/cmmi6.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfont
-s/cm/cmmi8.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/c
-mr10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.p
-fb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></o
-pt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/loca
-l/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss12.pfb></opt/local/sha
-re/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/te
-xmf-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on trans_from_coarse.pdf (5 pages, 134356 bytes).
+ 44i,11n,43p,284b,200s stack positions out of 5000i,500n,10000p,200000b,80000s
+</opt/local/share/texmf-texlive/fonts/type1/
+public/amsfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/publi
+c/amsfonts/cm/cmex10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/ams
+fonts/cm/cmmi10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts
+/cm/cmmi6.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
+mi8.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pf
+b></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.pfb></op
+t/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></opt/loca
+l/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/local/share
+/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss12.pfb></opt/local/share/texm
+f-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/texmf-tex
+live/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
+Output written on trans_from_coarse.pdf (3 pages, 122964 bytes).
 PDF statistics:
- 68 PDF objects out of 1000 (max. 8388607)
- 48 compressed objects within 1 object stream
+ 62 PDF objects out of 1000 (max. 8388607)
+ 44 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

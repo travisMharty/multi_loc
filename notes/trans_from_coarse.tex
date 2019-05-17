@@ -155,10 +155,10 @@ Take,
 \]
 Note that we have,
 \[
-  x \approx \mat{Q}_x \math{\Lambda}_x^{1/2} x'
+  x \approx \mat{Q}_x \mat{\Lambda}_x^{1/2} x'
 \]
 \[
-  y \approx \mat{Q}_y \math{\Lambda}_y^{1/2} y'
+  y \approx \mat{Q}_y \mat{\Lambda}_y^{1/2} y'
 \]
 where there is equality when $N_{\lambda_x}$ ($N_{\lambda_y}$) is the
 true rank of $\mat{P}$ ($\mat{R}$).
@@ -199,6 +199,34 @@ Note that we have,
   \mat{Q}_x^T \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V} = \mat{I}_{N_{\lambda_x}},
 \]
 but there is no left inverse.
+However, the right inverse is something like a left inverse in that
+\[
+  \mat{T}_x^{-R} \mat{T}_x = \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V}
+  \mat{V}^T \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T
+\]
+\[
+  \mat{T}_x^{-R} \mat{T}_x = \mat{Q}_x \mat{Q}_x^T
+\]
+which is equal to the identity matrix only if $P$ is full rank, and
+all eigenvectors are kept.
+However, if $\mu$ is in the span of the columns of $\mat{Q}_x$, then
+we have,
+\[
+  \mat{T}_x^{-R} \mat{T}_x \mu = \mat{Q}_x \mat{Q}_x^T \mu = \mu
+\]
+even if $\mat{T}_x$ does not have a left inverse.
+Furthermore, if $\mu$ is not in the span of the columns of
+$\mat{Q}_x$, this is possible even if the range of $\mat{P}$ and
+$\mat{Q}_x$ are equal, then we have,
+\[
+  (\mat{T}_x^{-R} \mat{T}_x + \mat{I}_{N_x} - \mat{Q}_x \mat{Q}_x^T)
+  \mu = \mat{Q}_x \mat{Q}_x^T \mu  + \mu - \mat{Q}_x \mat{Q}_x^T \mu =
+  \mu.
+\]
+We can therefore always recover the parts of $\mu$ that are removed
+because of the representation of $\mu$ in the column space of $\mat{Q}_x$.
+
+
 
 \section{Equivalence to standard KF}
 
@@ -208,150 +236,188 @@ filter update and the corresponding equations:
   \mat{K} = \mat{P}\mat{H}^T (\mat{H} \mat{P} \mat{H}^T + \mat{R})^{-1},
 \]
 \[
-  x^a = x + \mat{K} (y - \mat{H} x),
+  \mu^a = \mu + \mat{K} (y - \mat{H} \mu),
 \]
 \[
   \mat{P}^a = (\mat{I} - \mat{K} \mat{H}) \mat{P}.
 \]
 Alternatively, in terms of our transformed equations, we have:
 \[
-  \mat{K}' = \mat{I_x} \mat{\Sigma}^T ( \mat{\Sigma} \mat{I_x}
-  \mat{\Sigma} + \mat{I_y})^{-1} = \mat{\Sigma}^T (\mat{\Sigma}
-  \mat{\Sigma}^T + \mat{I_y})^{-1}
+  \tilde{\mat{K}} = \mat{I}_{N_{\lambda_x}} \mat{\Sigma}^T ( \mat{\Sigma} \mat{I}_{N_{\lambda_x}}
+  \mat{\Sigma}^T + \mat{I}_{N_{\lambda_y}})^{-1} = \mat{\Sigma}^T (\mat{\Sigma}
+  \mat{\Sigma}^T + \mat{I}_{N_{\lambda_x}})^{-1}
 \]
 \[
-  x^a' = x' + \mat{K}'(y' + \mat{\Sigma} x')
+  \tilde{\mu}^a = \tilde{\mu} + \tilde{\mat{K}}(\tilde{y} + \mat{\Sigma} \tilde{\mu})
 \]
 \[
-  \mat{P}^a' = (\mat{I} - \mat{K}' \mat{\Sigma}) \mat{P}'
+  \tilde{\mat{P}}^a = (\mat{I}_{N_{\lambda_x}} - \tilde{\mat{K}} \mat{\Sigma}) \tilde{\mat{P}}.
 \]
-For the sake of greater generality take
+We can then convert $\tilde{x}^a$ and $\tilde{\mat{P}}^a$ back to the
+original $x$-space through,
+\[
+  \mu^a_1 = \mat{T}_x^{-R} \tilde{\mu}^a
+\]
+\[
+  \text{ and }
+\]
+\[
+  \mat{P}^a_1 = \mat{T}_x^{-R} \tilde{\mat{P}}^a \left(\mat{T}_x^{-R}\right)^T.
+\]
+
+Assuming that the ranks of $\mat{P}$ and $\mat{R}$ are $N_{\lambda_x}$
+and $N_{\lambda_y}$ respectively,
+\[
+  \tilde{\mat{K}} = \mat{\Sigma}^T (\mat{\Sigma} \mat{\Sigma}^T +
+  \mat{I}_{N_{\lambda_x}})^{-1}
+\]
+\[
+  \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{T}_x^T (\mat{T}_y \mat{H}
+  \mat{T}_x^{-R})^T \left((\mat{T}_y \mat{H} \mat{T}_x^{-R})(\mat{T}_y
+  \mat{H} \mat{T}_x^{-R})^T + \mat{T}_y \mat{R} \mat{T}_y^T \right)^{-1}
+\]
+\[
+  \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{T}_x^T \left( \mat{T}_x^{-R}
+  \right)^T \mat{H}^T \mat{T}_y^T
+  \left( \mat{T}_y \mat{H} \mat{T}_x^{-R} \left( \mat{T}_x^{-R}
+    \right)^T \mat{H}^T \mat{T}_y^T + \mat{T}_y \mat{R} \mat{T}_y^T \right)^{-1}
+\]
+\[
+  \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{Q}_x \mat{Q}_x^T \mat{H}^T \mat{T}_y^T
+  \left( \mat{T}_y \left( \mat{H} \mat{Q}_x \Lambda_x \mat{Q}_x^T
+      \mat{H}^T + \mat{R}\right) \mat{T}_y^T \right)^{-1}
+\]
+If we assume that $\mu$ is in the span of $\mat{Q}_x$, we have,
+\[
+   x^a_1 = \mat{T}_x^{-R} \tilde{x}^a
+\]
+\[
+   x^a_1 = \mat{T}_x^{-R} \left( \tilde{x} + \tilde{K} \right)
+\]
+
+
+% \section{Transformation from coarse}
 
 
 
+% We have two ensembles representing the same system.
+% The ensemble $X$ is a coarse representation of the state, but has many ensemble members.
+% The ensemble $Z$ is a fine representation of the sates, but has few ensemble members.
+% \[
+% \dim{X} = N_x, N_{ex}
+% \]
+% \[
+% \dim{Z} = N_z, N_{ez}
+% \]
 
-\section{Transformation from coarse}
+% In order to find the eigenvalues and eigenvectors of the sample correlation of $X$, we take the singular value decomposition of $\tilde{X} = {(N_{ex} - 1)}^{-1/2} (X - \bar{X})/ \sd(X)$, where $\sd(X)$ is the standard deviation of each element of $X$.
+% \[
+% U_x S_x V_x^T = \tilde{X}
+% \]
+% This means that,
+% \[
+% U_x S_z^2 U_x^T = \hat{C}_x
+% \]
+% where $\hat{C}_x$ is the sample correlation of $X$.
 
+% We want to then use $U_x$, or its leading columns, to estimate the leading $U_z$.
+% To do this, we interpolate $U_x$ to the $z$ space and then use QR factorization to ensure the interpolated $u_x$'s are orthonormal:
+% \[
+% U_{x} = \interp (U_x)
+% \]
+% \[
+% U_{xi}, R = \QR (U_{xi}).
+% \]
+% We then must choose how many of the columns of $U_{xi}$ should be used.
+% The best way to make this choice is unclear.
+% A few ways that I am considering are:
+% \begin{enumerate}
+% \item Keep $U_{xi}$ based on the cumulative sum of their corresponding eigenvalues.
+% \item Keep $U_{xi}$ based on the rate of change of their corresponding eigenvalues.
+% \item Keep $U_{xi}$ based on some measure of the length scale produced by the low rank approximation of $\hat{C}_x$ and the residual.
+% \item Keep $U_{xi}$ based on how orthogonal the interpolated vector is in $z$ space before orthogonalization.
+% \end{enumerate}
+% It should be noted that keeping all columns can be detrimental to the assimilation process.
+% If some of the columns of $U_{xi}$ are representing small scale structures, then in the following steps they will still be used to represent some of these small scale structures.
 
+% After choosing which columns of $U_{xi}$ to keep, we must determine what eigenvalues they should have.
+% We do this by taking $\lambda = u_{xi}^T \hat{C}_z u_{xi}$ as the eigenvalue of $u{xi}$ for our approximation of $C_z$.
+% Alternatively, we can take $\lambda = {(\tilde{Z}^T u_{xi})}^T (\tilde{Z}^T u_{xi})$ where $\tilde{Z}$ is defined similarly as $\tilde{X}$.
+% This will give us the leading eigenvectors and an approximation of their eigenvalues of $C_Z$.
 
-We have two ensembles representing the same system.
-The ensemble $X$ is a coarse representation of the state, but has many ensemble members.
-The ensemble $Z$ is a fine representation of the sates, but has few ensemble members.
-\[
-\dim{X} = N_x, N_{ex}
-\]
-\[
-\dim{Z} = N_z, N_{ez}
-\]
+% These eigenvectors and eigenvalues represent the large scale structure of the problem.
+% To then find the small scales of the problem, we take
+% \[
+% C_z^\bot = C_z^\parallel - \hat{C}_z
+% \]
+% where
+% \[
+% C_z^\parallel = U_{xi} \Lambda_{xi}  U_{xi}^T
+% \]
+% and $\Lambda_{xi}$ is the diagonal matrix with the $\lambda$s described above on the diagonal.
+% We can then localize $C_z^\bot$ to get at the small scales that are represented in $Z$.
 
-In order to find the eigenvalues and eigenvectors of the sample correlation of $X$, we take the singular value decomposition of $\tilde{X} = {(N_{ex} - 1)}^{-1/2} (X - \bar{X})/ \sd(X)$, where $\sd(X)$ is the standard deviation of each element of $X$.
-\[
-U_x S_x V_x^T = \tilde{X}
-\]
-This means that,
-\[
-U_x S_z^2 U_x^T = \hat{C}_x
-\]
-where $\hat{C}_x$ is the sample correlation of $X$.
+% We must choose how to localize $C_z^\bot$.
+% One reasonable expectation is that the scales in $C_z^\bot$ will be shorter or similar to $N_z/N_x$.
+% This choice will also be affected by the choice of how many columns of $U_{xi}$ to keep.
+% Once the localization matrix $L$ is chosen, we can then generate our localized correlation matrix as:
+% \[
+% C_z^{loc} = C_z^\parallel + L \circ C_Z^\bot
+% \]
+% and the corresponding covariance matrix as:
+% \[
+% P_z^{loc} = D_z C_z^{loc} D_z.
+% \]
+% where $D_z$ is the diagonal matrix with sample standard deviations of $Z$ on the diagonal.
 
-We want to then use $U_x$, or its leading columns, to estimate the leading $U_z$.
-To do this, we interpolate $U_x$ to the $z$ space and then use QR factorization to ensure the interpolated $u_x$'s are orthonormal:
-\[
-U_{x} = \interp (U_x)
-\]
-\[
-U_{xi}, R = \QR (U_{xi}).
-\]
-We then must choose how many of the columns of $U_{xi}$ should be used.
-The best way to make this choice is unclear.
-A few ways that I am considering are:
-\begin{enumerate}
-\item Keep $U_{xi}$ based on the cumulative sum of their corresponding eigenvalues.
-\item Keep $U_{xi}$ based on the rate of change of their corresponding eigenvalues.
-\item Keep $U_{xi}$ based on some measure of the length scale produced by the low rank approximation of $\hat{C}_x$ and the residual.
-\item Keep $U_{xi}$ based on how orthogonal the interpolated vector is in $z$ space before orthogonalization.
-\end{enumerate}
-It should be noted that keeping all columns can be detrimental to the assimilation process.
-If some of the columns of $U_{xi}$ are representing small scale structures, then in the following steps they will still be used to represent some of these small scale structures.
+% We can then find the leading eigenvectors and eigenvalues of $C_z^{loc}$:
+% \[
+% Q \Lambda Q^T = C_z^{loc}
+% \]
+% and use them to transform the $z$ variable.
+% First, we must calculate a whitening transformation
+% \[
+% T_w = \Lambda^{-1/2} Q^T
+% \]
+% and its right inverse
+% \[
+% T_w^i = Q \Lambda^{1/2}
+% \]
+% and the singular value decomposition
+% \[
+% U \Sigma V^T = R^{-1/2} H T_w^i.
+% \]
+% We can then define transformations for both $z$ and $y$
+% \[
+% T_z = V^T T_w
+% \]
+% \[
+% T_y = U^T R^{-1/2}
+% \]
 
-After choosing which columns of $U_{xi}$ to keep, we must determine what eigenvalues they should have.
-We do this by taking $\lambda = u_{xi}^T \hat{C}_z u_{xi}$ as the eigenvalue of $u{xi}$ for our approximation of $C_z$.
-Alternatively, we can take $\lambda = {(\tilde{Z}^T u_{xi})}^T (\tilde{Z}^T u_{xi})$ where $\tilde{Z}$ is defined similarly as $\tilde{X}$.
-This will give us the leading eigenvectors and an approximation of their eigenvalues of $C_Z$.
-
-These eigenvectors and eigenvalues represent the large scale structure of the problem.
-To then find the small scales of the problem, we take
-\[
-C_z^\bot = C_z^\parallel - \hat{C}_z
-\]
-where
-\[
-C_z^\parallel = U_{xi} \Lambda_{xi}  U_{xi}^T
-\]
-and $\Lambda_{xi}$ is the diagonal matrix with the $\lambda$s described above on the diagonal.
-We can then localize $C_z^\bot$ to get at the small scales that are represented in $Z$.
-
-We must choose how to localize $C_z^\bot$.
-One reasonable expectation is that the scales in $C_z^\bot$ will be shorter or similar to $N_z/N_x$.
-This choice will also be affected by the choice of how many columns of $U_{xi}$ to keep.
-Once the localization matrix $L$ is chosen, we can then generate our localized correlation matrix as:
-\[
-C_z^{loc} = C_z^\parallel + L \circ C_Z^\bot
-\]
-and the corresponding covariance matrix as:
-\[
-P_z^{loc} = D_z C_z^{loc} D_z.
-\]
-where $D_z$ is the diagonal matrix with sample standard deviations of $Z$ on the diagonal.
-
-We can then find the leading eigenvectors and eigenvalues of $C_z^{loc}$:
-\[
-Q \Lambda Q^T = C_z^{loc}
-\]
-and use them to transform the $z$ variable.
-First, we must calculate a whitening transformation
-\[
-T_w = \Lambda^{-1/2} Q^T
-\]
-and its right inverse
-\[
-T_w^i = Q \Lambda^{1/2}
-\]
-and the singular value decomposition
-\[
-U \Sigma V^T = R^{-1/2} H T_w^i.
-\]
-We can then define transformations for both $z$ and $y$
-\[
-T_z = V^T T_w
-\]
-\[
-T_y = U^T R^{-1/2}
-\]
-
-We then know $z^* = T_z z$ and $y^* = T_y y$ have identity covariance matrices and
-\[
-y^* = \Sigma z^* + \epsilon^*
-\]
-\[
-U^T R^{-1/2} y = \Sigma V^T \Lambda^{-1/2} Q^T z + \epsilon^*
-\]
-\[
-y = R^{1/2} U \Sigma V^T \Lambda^{-1/2} Q^T z  + \epsilon
-\]
-\[
-y = R^{1/2}R^{-1/2} H Q \Lambda^{1/2} \Lambda^{-1/2} Q^T z  + \epsilon
-\]
-\[
-y = H z  + \epsilon
-\]
-The question is: can I do this better?
-Specifically:
-\begin{enumerate}
-\item Can I calculate the eigenvectors and values of $C^{loc}$ without generating $C^\parallel$ or $C^\bot$ explicitly?
-\item Can I calculate the eigenvectors and values of $P$ from those of $C$ without generating $C$?
-\item Can I calculate the singular vectors and values of $R^{-1/2} H T_w^i$ from the singular value decomposition of $R$, $H$, and $T_w^i$?
-\end{enumerate}
+% We then know $z^* = T_z z$ and $y^* = T_y y$ have identity covariance matrices and
+% \[
+% y^* = \Sigma z^* + \epsilon^*
+% \]
+% \[
+% U^T R^{-1/2} y = \Sigma V^T \Lambda^{-1/2} Q^T z + \epsilon^*
+% \]
+% \[
+% y = R^{1/2} U \Sigma V^T \Lambda^{-1/2} Q^T z  + \epsilon
+% \]
+% \[
+% y = R^{1/2}R^{-1/2} H Q \Lambda^{1/2} \Lambda^{-1/2} Q^T z  + \epsilon
+% \]
+% \[
+% y = H z  + \epsilon
+% \]
+% The question is: can I do this better?
+% Specifically:
+% \begin{enumerate}
+% \item Can I calculate the eigenvectors and values of $C^{loc}$ without generating $C^\parallel$ or $C^\bot$ explicitly?
+% \item Can I calculate the eigenvectors and values of $P$ from those of $C$ without generating $C$?
+% \item Can I calculate the singular vectors and values of $R^{-1/2} H T_w^i$ from the singular value decomposition of $R$, $H$, and $T_w^i$?
+% \end{enumerate}
 
 
 
