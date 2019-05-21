@@ -244,8 +244,29 @@ We then have,
 \]
 where $N_{x_c} < N_x$ and $N_{e_c} > N_e$.
 
-Taking the singular value decomposition of will give us the
-leading eigenvalues and eigenvectors of the
+Taking the singular value decomposition of the ensemble of
+coarse perturbations, $\mat{X}_c^*$, will give us the eigenvalues and
+eigenvectors of the sample covariance matrix derived from $\mat{X}_c$.
+\[
+  \mat{X}_c^{*} = \left( \mat{X}_c - \frac{1}{N}\bar{\mat{X}}_c
+  \mat{1}_c \right) / \sqrt{N_{e_c} - 1}
+\]
+\[
+  \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V}^T_{temp} = \mat{X}_c^*
+\]
+\[
+  \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T = (\mat{X}_c^*)
+  {(\mat{X}_c^*)}^{T}
+\]
+where $\mat{1}_c$ is a matrix of all ones of with the same dimension as
+$\mat{X}_c$ and $\bar{\mat{X}}_c$ is the sample mean of $\mat{X}_c$.
+Assuming that we know $\mat{Q}_y$ and $\mat{\Lambda}_y$, we can then
+calculate $\mat{U}_c$ and $\mat{V}_c$,
+\[
+  \mat{U}_c \mat{\Sigma}_c \mat{V}_c^T = \mat{\Lambda}^{-1/2}_y
+  \mat{Q}_y^T \mat{H} \mat{Q}_x \mat{\Lambda}^{1/2}_x.
+\]
+This then allows us to use
 
 \section{Equivalence to standard KF}
 
