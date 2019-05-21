@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  16 MAY 2019 17:13
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  20 MAY 2019 18:23
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -408,7 +408,7 @@ L/cmm/m/it/10.95 N\OT1/cmr/m/n/10.95 (0\OML/cmm/m/it/10.95 ; \OT1/cmr/bx/n/10.9
 tion of $\OT1/cmr/bx/n/10.95 ^^C[]Q[]HQ[]^^C[]$
  []
 
-[2] [3] (./trans_from_coarse.aux) ) 
+[2] [3] [4] (./trans_from_coarse.aux) ) 
 Here is how much of TeX's memory you used:
  4582 strings out of 493762
  68272 string characters out of 6152599
@@ -416,23 +416,23 @@ Here is how much of TeX's memory you used:
  8229 multiletter control sequences out of 15000+600000
  10624 words of font info for 38 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 44i,11n,43p,284b,200s stack positions out of 5000i,500n,10000p,200000b,80000s
-</opt/local/share/texmf-texlive/fonts/type1/
-public/amsfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/publi
-c/amsfonts/cm/cmex10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/ams
-fonts/cm/cmmi10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts
-/cm/cmmi6.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
-mi8.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pf
-b></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.pfb></op
-t/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></opt/loca
-l/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/local/share
-/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss12.pfb></opt/local/share/texm
-f-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/texmf-tex
-live/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on trans_from_coarse.pdf (3 pages, 122964 bytes).
+ 44i,11n,43p,284b,208s stack positions out of 5000i,500n,10000p,200000b,80000s
+</opt/local/share/texmf-texlive/fonts/ty
+pe1/public/amsfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/p
+ublic/amsfonts/cm/cmex10.pfb></opt/local/share/texmf-texlive/fonts/type1/public
+/amsfonts/cm/cmmi10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsf
+onts/cm/cmmi6.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/c
+m/cmmi8.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr1
+0.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.pfb>
+</opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></opt/
+local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/local/s
+hare/texmf-texlive/fonts/type1/public/amsfonts/cm/cmss12.pfb></opt/local/share/
+texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/texmf
+-texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
+Output written on trans_from_coarse.pdf (4 pages, 125762 bytes).
 PDF statistics:
- 62 PDF objects out of 1000 (max. 8388607)
- 44 compressed objects within 1 object stream
+ 65 PDF objects out of 1000 (max. 8388607)
+ 46 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

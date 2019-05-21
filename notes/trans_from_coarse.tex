@@ -226,7 +226,26 @@ $\mat{Q}_x$ are equal, then we have,
 We can therefore always recover the parts of $\mu$ that are removed
 because of the representation of $\mu$ in the column space of $\mat{Q}_x$.
 
+\section{Multi-scale optimal transform}
 
+Suppose that we have two ensembles representing the state $x$.
+One ensemble, $\mat{X}_c$ will have many members, but will have a lower
+resolution and only represent large scale structures of the state.
+The other ensemble, $\mat{X}$ will have fewer members, but will
+have a finer resolution and therefore be able to represent fine scale
+structures of the state.
+We then have,
+\[
+  \dim \mat{X}_c = N_{x_c}, N_{e_c}
+\]
+\[\text{and}\]
+\[
+  \dim \mat{X} = N_x, N_e
+\]
+where $N_{x_c} < N_x$ and $N_{e_c} > N_e$.
+
+Taking the singular value decomposition of will give us the
+leading eigenvalues and eigenvectors of the
 
 \section{Equivalence to standard KF}
 
@@ -245,7 +264,7 @@ Alternatively, in terms of our transformed equations, we have:
 \[
   \tilde{\mat{K}} = \mat{I}_{N_{\lambda_x}} \mat{\Sigma}^T ( \mat{\Sigma} \mat{I}_{N_{\lambda_x}}
   \mat{\Sigma}^T + \mat{I}_{N_{\lambda_y}})^{-1} = \mat{\Sigma}^T (\mat{\Sigma}
-  \mat{\Sigma}^T + \mat{I}_{N_{\lambda_x}})^{-1}
+  \mat{\Sigma}^T + \mat{I}_{N_{\lambda_y}})^{-1}
 \]
 \[
   \tilde{\mu}^a = \tilde{\mu} + \tilde{\mat{K}}(\tilde{y} + \mat{\Sigma} \tilde{\mu})
@@ -269,7 +288,7 @@ Assuming that the ranks of $\mat{P}$ and $\mat{R}$ are $N_{\lambda_x}$
 and $N_{\lambda_y}$ respectively,
 \[
   \tilde{\mat{K}} = \mat{\Sigma}^T (\mat{\Sigma} \mat{\Sigma}^T +
-  \mat{I}_{N_{\lambda_x}})^{-1}
+  \mat{I}_{N_{\lambda_y}})^{-1}
 \]
 \[
   \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{T}_x^T (\mat{T}_y \mat{H}
