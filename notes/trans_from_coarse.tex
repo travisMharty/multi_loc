@@ -252,10 +252,10 @@ eigenvectors of the sample covariance matrix derived from $\mat{X}_c$.
   \mat{1}_c \right) / \sqrt{N_{e_c} - 1}
 \]
 \[
-  \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V}^T_{temp} = \mat{X}_c^*
+  \mat{Q}_c \mat{\Lambda}_c^{1/2} \mat{V}^T_{temp} = \mat{X}_c^*
 \]
 \[
-  \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T = (\mat{X}_c^*)
+  \mat{Q}_c \mat{\Lambda}_c \mat{Q}_c^T = (\mat{X}_c^*)
   {(\mat{X}_c^*)}^{T}
 \]
 where $\mat{1}_c$ is a matrix of all ones of with the same dimension as
@@ -264,9 +264,78 @@ Assuming that we know $\mat{Q}_y$ and $\mat{\Lambda}_y$, we can then
 calculate $\mat{U}_c$ and $\mat{V}_c$,
 \[
   \mat{U}_c \mat{\Sigma}_c \mat{V}_c^T = \mat{\Lambda}^{-1/2}_y
-  \mat{Q}_y^T \mat{H} \mat{Q}_x \mat{\Lambda}^{1/2}_x.
+  \mat{Q}_y^T \mat{H} \mat{Q}_c \mat{\Lambda}^{1/2}_c.
 \]
-This then allows us to use
+This gives us the optimal linear transform, or as much of it as we
+deem appropriate to keep, for the coarse scale system.
+We can then use this to calculate the coarse parts of the optimal
+linear transform for the fine scale system.
+To do this, we can use $\mat{Q}_c$, $\mat{U}_c$, and $\mat{V}_c$, but
+must recalculate $\mat{\Lambda}_c$ and $\mat{\Sigma}_c$ for their fine
+state equivalents $\mat{\Lambda}_{fc}$ and $\mat{\Sigma}_{fc}$.
+
+In order to calculate $\mat{\Lambda}_{fc}$ we must first interpolate
+the eigenvectors $\mat{Q}_c$ to the fine state space resulting in
+$\mat{Q}_{fc}$.
+The interpolated eigenvectors will need to be modified so that they
+form a orthonormal set in fine space.
+Once this is done, we can then calculate their corresponding
+eigenvalues by assuming that the interpolated eigenvectors are left
+singular values of the ensemble perturbations for $\mat{X}$,
+$\mat{X}^*$:
+\[
+  \lambda_{fc}[i]^{1/2} = \lVert q_{fc}[i]^T \mat{X}^* \rVert
+\]
+where $\lambda_{fc}[i]$ is the eigenvalue of $\mat{X}^*\left(
+  \mat{X}^* \right)^T$ corresponding to the eigenvector $q_{fc}[i]$.
+We can then be arrange all of the eigenvalues and vectors into the
+matrices $\mat{\Lambda}_{fc}$ and $\mat{Q}_{fc}$.
+We can calculate the singular values by assuming that $\mat{U}_c$
+and $\mat{V}_c$ have columns made of left and right singular vectors
+of $\mat{\Lambda}_y^{1/2} \mat{Q}_y^T \mat{H} \mat{Q}_{fc}
+\mat{\Lambda}_{fc}^{-1/2}$:
+\[
+  \sigma_{fc}[i] = u_c[i]^T \mat{\Lambda}_y^{1/2}
+\mat{Q}_y^T \mat{H} \mat{Q}_{fc} \mat{\Lambda}_{fc}^{-1/2} v_{c}[i]
+\]
+where $\sigma_{fc}[i]$ is the singular value corresponding to the left
+and right singular vectors $u_c[i]$ and $v_c[i]$.
+These singular values can then be arranged in the matrix
+$\mat{\Sigma}_{fc}$
+
+Now that these quantities have been calculated, we can then form the
+optimal linear transforms and their right inverses for our fine system
+corresponding to the large scales:
+\[
+  \mat{T}_{xl} = \mat{V}_c^T \mat{\Lambda}_{cf}^{-1/2} \mat{Q}_{cf}^T
+\]
+\[
+  \mat{T}_{xl}^{-R} = \mat{Q}_{cf} \mat{\Lambda}_{cf}^{1/2} \mat{V}_c
+\]
+\[
+  \mat{T}_{yl} = \mat{U}_c^T \mat{\Lambda}_{y}^{-1/2} \mat{Q}_{y}^T
+\]
+\[
+  \mat{T}_{yl}^{-R} = \mat{Q}_{y} \mat{\Lambda}_{y}^{1/2} \mat{U}_c
+\]
+
+We can also calculate the linear transform in our fine system
+corresponding to our short scales.
+Since the above transforms will assimilate the information
+corresponding to the long scales, we are able to apply localization
+that is appropriate for our short scales when calculating the
+following transforms.
+This process is very similar to the standard reduced rank optimal
+linear transform, accept that we must ensure that certain vectors are
+orthogonal to those used above.
+
+We start by calculating and localizing the sample covariance based on
+our fine ensemble $\mat{X}$:
+\[
+  \mat{P}_{loc} = \mat{L_s} \circ \mat{X}^* \left( \mat{X}^* \right)^T
+\]
+
+
 
 \section{Equivalence to standard KF}
 
