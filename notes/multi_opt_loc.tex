@@ -1,0 +1,721 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+% This is a simple template for a LaTeX document using the "article" class.
+% See "book", "report", "letter" for other types of document.
+
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+
+%%% Examples of Article customizations
+% These packages are optional, depending whether you want the features they provide.
+% See the LaTeX Companion or other references for full information.
+
+%%% PAGE DIMENSIONS
+\usepackage{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+% \geometry{margin=2in} % for example, change the margins to 2 inches all round
+% \geometry{landscape} % set up the page for landscape
+%   read geometry.pdf for detailed page layout information
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+% \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{booktabs} % for much better looking tables
+\usepackage{array} % for better arrays (eg matrices) in maths
+\usepackage{paralist} % very flexible & customisable lists (eg. enumerate/itemize, etc.)
+\usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
+\usepackage{subfig} % make it possible to include more than one captioned figure/table in a single float
+% These packages are all incorporated in the memoir class to one degree or another...
+
+%%% HEADERS & FOOTERS
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0pt} % customise the layout...
+\lhead{}\chead{}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+\allsectionsfont{\sffamily\mdseries\upshape} % (See the fntguide.pdf for font help)
+% (This matches ConTeXt defaults)
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+\usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
+\renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
+\renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+
+
+
+%%% This is all Custom
+\usepackage{amsmath}
+\DeclareMathOperator{\interp}{interp}
+\DeclareMathOperator{\QR}{QR}
+\DeclareMathOperator{\sd}{sd}
+\newcommand{\mat}{\mathbf}
+
+%%% END Article customizations
+
+%%% The "real" document content comes below...
+
+\title{Optimal linear transform for multi-scale localization}
+\author{Travis Harty}
+\date{} % Activate to display a given date or no date (if empty),
+         % otherwise the current date is printed
+
+\begin{document}
+\maketitle
+
+We update our state $x\sim N(\mu, \mat{P})$ using observation
+$y = \mat{H} \mu + \varepsilon$, where $\varepsilon \sim N(0, \mat{R})$,
+$\dim{x} = N_x$, and $\dim{y} = N_y$.
+We will look for transformations $\mat{T}_{xl}$, $\mat{T}_{yl}$,
+$\mat{T}_{xs}$, and $\mat{T}_{ys}$ such that $x_{l} = \mat{T}_{xl} x$
+and $y_{l} = \mat{T}_{yl} y$ contain long-scale information and $x_s =
+\mat{T}_{xs} x$ and $y_s = \mat{T}_{ys} y$ contains short-scale
+information.
+
+We begin by calculating the eigenvalue decomposition of $\mat{P}$ and
+$\mat{R}$,
+\[
+  \mat{P} = \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T
+  \text{ and }
+  \mat{R} = \mat{Q}_y \mat{\Lambda}_y \mat{Q}_y^T.
+\]
+We do not assume that $\mat{P}$ or $\mat{R}$ are full rank and that
+the decompositions are in reduced form.
+
+We can now reform the relationship between $x$ and $y$.
+First we must notice that even if the image of $\mat{P}$ is equal to
+the image of $\mat{Q}_x$, this does not mean that $\mu$ is in the
+image of $\mat{Q}_x$.
+This means that if we project $\mu$ onto the preimage of $\mat{Q}_x$
+we will lose the part of $\mu$ that is in the kernel of $\mat{Q}_x$
+and therefore must add that part back using the projection onto the
+kernel of $\mat{Q}_x$
+\[
+  \mat{P}^\text{roj}_x = \mat{I} - \mat{Q}_x \mat{Q}_x^T,
+\]
+with the same statement being true for $y$.
+We therefore have
+\[
+  y = \mat{H} \mu + \varepsilon
+\]
+\[
+  \mat{Q}_y \mat{\Lambda}_y^{1/2} \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T y
+  + \mat{P}^\text{roj}_y y
+  = \mat{H}
+  \left[
+    \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T \mu
+    + \mat{P}^\text{roj} \mu
+  \right]
+  + \varepsilon
+\]
+\[
+  \mat{Q}_y \mat{\Lambda}_y^{1/2} \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T y
+  + \mat{P}^\text{roj}_y y
+  = \mat{H}
+  \left[
+    \mat{Q}_{lx} \mat{\Lambda}_{lx}^{1/2} \mat{\Lambda}_{lx}^{-1/2}
+    \mat{Q}_{lx}^T \mu
+    + \mat{Q}_{sx} \mat{\Lambda}_{sx}^{1/2} \mat{\Lambda}_{sx}^{-1/2}
+    \mat{Q}_{sx}^T \mu
+    + \mat{P}^\text{roj} \mu
+  \right]
+  + \varepsilon
+\]
+where
+\begin{equation}\label{eq:eig decomp decomp}
+  \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T
+  = \mat{Q}_{lx} \mat{\Lambda}_{lx} \mat{Q}_{lx}^T
+  + \mat{Q}_{sx} \mat{\Lambda}_{sx} \mat{Q}_{sx}^T,
+\end{equation}
+and $\mat{Q}_{lx}$ and $\mat{Q}_{sx}$ contain the eigenvectors that
+contain information about the long and short scales
+respectively.
+Setting $y' = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T y$, $\mu_l' =
+\mat{\Lambda}_l^{-1/2} \mat{Q}_{lx}^T \mu$, and $\mu_s' =
+\mat{\Lambda}_s^{1/2} \mat{Q}_{sx} \mu$, we have
+\[
+  \mat{Q}_y \mat{\Lambda}_y^{1/2} y'
+  + \mat{P}^\text{roj}_y y
+  = \mat{H} \mat{Q}_{lx} \mat{\Lambda}_{lx}^{1/2} \mu_l'
+  + \mat{H} \mat{Q}_{sx} \mat{\Lambda}_{sx}^{1/2} \mu_s'
+  + \mat{H} \mat{P}^\text{roj} \mu
+  + \varepsilon.
+\]
+Furthermore, because $\mat{P}^\text{roj}_y y$ is orthogonal to the
+columns of $\mat{Q}_y$, we have
+\begin{equation}\label{eq:prime decomp}
+  y'
+  = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \mat{Q}_{lx} \mat{\Lambda}_{lx}^{1/2} \mu_l'
+  + \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \mat{Q}_{sx} \mat{\Lambda}_{sx}^{1/2} \mu_s'
+  + \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \mat{P}^\text{roj} \mu
+  + \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T \varepsilon.
+\end{equation}
+In this form, we cannot perform data assimilation individually on
+$mu_l'$ or $\mu_s'$ individually because they each are using the
+single $y'$ observation.
+The question then becomes: Can we decompose $y'$ into observations of
+only long and short scales as defined though $\mat{Q}_{xl}$ and
+$\mat{Q}_{xs}$?
+If we have any hope of this, we first require that the first three
+terms on the left hand side of Eq.~(\ref{eq:prime decomp}) be
+orthogonal.
+To check this, we first reformulate Eq.~(\ref{eq:eig decomp decomp}):
+\begin{equation}\label{eq:eig decomp decomp full}
+  \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T
+  = \tilde{\mat{Q}}_{x} \tilde{\mat{\Lambda}}_{lx} \tilde{\mat{Q}}_{x}^T
+  + \tilde{\mat{Q}}_{x} \tilde{\mat{\Lambda}}_{sx} \tilde{\mat{Q}}_{x}^T,
+\end{equation}
+where $\tilde{\mat{\Lambda}}_{lx}$ has zeros on the diagonal that
+correspond to short scale eigenvectors,
+$\tilde{\mat{\Lambda}}_{sx}$ has zeros on the diagonal that correspond
+to long scale eigenvectors, and both have zeros on the diagonal that
+correspond to eigenvectors that are in the kernel of $\mat{P}$.
+If we have $\tilde{\mu}_l = \tilde{\Lambda}_{lx}^{-1/2}
+\tilde{\mat{Q}}_x^T \mu$ and $\tilde{\mu}_s =
+\tilde{\Lambda}_{sx}^{-1/2} \tilde{\mat{Q}}_x^T \mu$ then we can see
+that
+\[
+  \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \mat{Q}_{lx} \mat{\Lambda}_{lx}^{1/2} \mu_l'
+  =\mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \tilde{\mat{Q}}_{x} \tilde{\mat{\Lambda}}_{lx}^{1/2}
+  \tilde{\mu}_l
+\]
+\[\text{and}\]
+\[
+  \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \mat{Q}_{sx} \mat{\Lambda}_{sx}^{1/2} \mu_l'
+  =\mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \tilde{\mat{Q}}_{x} \tilde{\mat{\Lambda}}_{sx}^{1/2}
+  \tilde{\mu}_s.
+\]
+We also have
+\begin{equation}\label{eq:orth mus}
+  \tilde{y}_l^T \tilde{y}_s
+  = \tilde{\mu}_l^T \tilde{\mat{\Lambda}}_{lx}^{1/2}
+  \tilde{\mat{Q}}_x^T
+  \mat{H}^T \mat{Q}_y \mat{\Lambda}_y^{-1/2}
+  \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T
+  \mat{H} \tilde{\mat{Q}}_{x} \tilde{\mat{\Lambda}}_{sx}^{1/2}
+  \tilde{\mu}_s
+  = 0,
+\end{equation}
+because of the structures of $\tilde{\mat{\Lambda}}_{xl}$ and
+$\tilde{\mat{\Lambda}}_{xs}$.
+
+
+
+
+
+
+
+
+
+
+
+% We will perform this update by first transforming our variables using
+% linear transformations $\mat{T}_x$ and $\mat{T}_y$ for $x$ and $y$ respectively
+% such that $\mat{T}_x x = \tilde{x} \sim N(\tilde{\mu}, \mat{I})$ and
+% $\mat{T}_y y = \tilde{y} = \mat{\Sigma} \tilde{\mu} + \tilde{\epsilongx}$, where
+% $\mat{\Sigma}$ is diagonal, and $\tilde{\epsilon} \sim N(0, \mat{I})$.
+
+% Take,
+% \[
+%   x' = \mat{P}^{-1/2} x
+%   \text{ and }
+%   y' = \mat{R}^{-1/2} y.
+% \]
+% We then have,
+% \[
+%   y = \mat{H} \mu + \epsilon
+% \]
+% \[
+%   \mat{R}^{1/2} y' = \mat{H}
+%   \mat{P}^{1/2} \mu' + \epsilon
+% \]
+% \[
+%   y' = \mat{R}^{-1/2}\mat{H}
+%   \mat{P}^{1/2} \mu' + \epsilon',
+% \]
+% where $\epsilon \sim N(0, \mat{I})$.
+% We can then take the singular value decomposition of
+% $\mat{R}^{-1/2} \mat{H} \mat{P}^{1/2}$ yielding,
+% \[
+%   y' = \mat{U} \mat{\Sigma} \mat{V}^{T} \mu' + \epsilon'
+% \]
+% \[
+%   \mat{U}^T y' = \mat{\Sigma} (\mat{V}^T \mu') + \tilde{\epsilon}
+% \]
+% \[
+%   \tilde{y}= \mat{\Sigma} \tilde{\mu} + \tilde{\epsilon}
+% \]
+% where $\mat{\Sigma}$ is diagonal and $\tilde{\epsilon} \sim N(0,
+% \mat{I})$.
+% We have $\mat{T}_x = \mat{V}^T \mat{P}^{-1/2}$ and
+% $\mat{T}_y = \mat{U}^T \mat{R}^{-1/2}$.
+
+
+
+
+
+% \section{Dimension reduction optimal linear transform}
+
+% We again update our state $x \sim N(\mu, \mat{P})$ with
+% observations $y = \mat{H} x + \epsilon$, where $\epsilon \sim N(0,
+% \mat{R})$.
+% We will now calculate
+% \[
+%   \mat{P} = \mat{Q}_x \mat{\Lambda}_x \mat{Q}_x^T
+%   \text{ and }
+%   \mat{R} = \mat{Q}_y \mat{\Lambda}_y \mat{Q}_y^T
+% \]
+% and choose $N_{\lambda_x}$ and $N_{\lambda_y}$ that are the number of
+% eigenvalues to keep for $P$ and $R$ respectively such that,
+% \[
+%   \dim(\mat{Q}_x) = (N_x, N_{\lambda_x})\text{; }\dim(\mat{\Lambda}_x) =
+%   (N_{\lambda_x}, N_{\lambda_x})
+% \]
+% \[
+%   \text{ and }
+% \]
+% \[
+%   \dim(\mat{Q}_y) = (N_y, N_{\lambda_y})\text{; }\dim(\mat{\Lambda}_y) =
+%   (N_{\lambda_y}, N_{\lambda_y})
+% \]
+
+% We can then repeat the above calculations while reducing the
+% transformed variables' dimensions.
+% Take,
+% \[
+%   x' = \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T x
+%   \text{ and }
+%   y' = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T y
+% \]
+% Note that we have,
+% \[
+%   x' \sim N(\mat{\Lambda}_x^{-1/2} \mat{Q}_x^T \mu,
+%   \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T \mat{P} \mat{Q}
+%   \mat{\Lambda}_x^{-1/2})
+%   = N(\mu',
+%   \mat{\Lambda}_x^{-1/2} \mat{\Lambda}_x
+%   \mat{\Lambda}_x^{-1/2})
+%   = N(\mu', \mat{I}_{N_{\lambda_x}})
+% \]
+% \[
+%   y' \sim N(\mat{H} \mu', \mat{I}_{N_{\lambda_x}})
+% \]
+% \[
+%   \text{and}
+% \]
+% \[
+%   x \approx \mat{Q}_x \mat{\Lambda}_x^{1/2} x' + (\mat{I} - \mat{Q}_x \mat{Q}_x^T)\mu
+% \]
+
+% where there is equality when $N_{\lambda_x}$ is the
+% true rank of $\mat{P}$.
+
+% Assuming that $N_{\lambda_x}$ and $N_{\lambda_y}$ are the ranks of $P$
+% and $R$ respectively, we have,
+% \[
+%   y = \mat{H} \mu + \epsilon
+% \]
+% \[
+%   \mat{Q}_y \mat{\Lambda}_y^{1/2} y' = \mat{H}
+%   \mat{Q}_x \mat{\Lambda}_x^{1/2} \mu' + \epsilon
+% \]
+% \[
+%   y' = \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T \mat{H}
+%   \mat{Q}_x \mat{\Lambda}_x^{1/2} \mu' + \epsilon',
+% \]
+% where $\epsilon' \sim N(0, \mat{I}_{N_{\lambda_y}})$.
+% We can then take the singular value decomposition of
+% $\mat{\Lambda}_y^{-1/2} \mat{Q}_y^T \mat{H} \mat{Q}_x
+% \mat{\Lambda}_x^{1/2}$ yielding,
+% \[
+%   y' = \mat{U} \mat{\Sigma} \mat{V}^{T} \mu' + \epsilon'
+% \]
+% \[
+%   \mat{U}^T y' = \mat{\Sigma} (\mat{V}^T \mu') + \tilde{\epsilon}
+% \]
+% \[
+%   \tilde{y}= \mat{\Sigma} \tilde{\mu} + \tilde{\epsilon}
+% \]
+% where $\mat{\Sigma}$ is diagonal and $\tilde{\epsilon} \sim N(0,
+% \mat{I}_{N_{\lambda_y}})$.
+% We have $\mat{T}_x = \mat{V}^T \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T$ and
+% $\mat{T}_y = \mat{U}^T \mat{\Lambda}_y^{-1/2} \mat{Q}_y^T$.
+% Note that we have,
+% \[
+%   \mat{T}_x \mat{T}_x^{-R} = \mat{V}^T \mat{\Lambda}_x^{-1/2}
+%   \mat{Q}_x^T \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V} = \mat{I}_{N_{\lambda_x}},
+% \]
+% but there is no left inverse.
+% However, the right inverse is something like a left inverse in that
+% \[
+%   \mat{T}_x^{-R} \mat{T}_x = \mat{Q}_x \mat{\Lambda}_x^{1/2} \mat{V}
+%   \mat{V}^T \mat{\Lambda}_x^{-1/2} \mat{Q}_x^T
+% \]
+% \[
+%   \mat{T}_x^{-R} \mat{T}_x = \mat{Q}_x \mat{Q}_x^T
+% \]
+% which is equal to the identity matrix only if $P$ is full rank, and
+% all eigenvectors are kept.
+% However, if $\mu$ is in the span of the columns of $\mat{Q}_x$, then
+% we have,
+% \[
+%   \mat{T}_x^{-R} \mat{T}_x \mu = \mat{Q}_x \mat{Q}_x^T \mu = \mu
+% \]
+% even if $\mat{T}_x$ does not have a left inverse.
+% Furthermore, if $\mu$ is not in the span of the columns of
+% $\mat{Q}_x$, this is possible even if the range of $\mat{P}$ and
+% $\mat{Q}_x$ are equal, then we have,
+% \[
+%   (\mat{T}_x^{-R} \mat{T}_x + \mat{I}_{N_x} - \mat{Q}_x \mat{Q}_x^T)
+%   \mu = \mat{Q}_x \mat{Q}_x^T \mu  + \mu - \mat{Q}_x \mat{Q}_x^T \mu =
+%   \mu.
+% \]
+% We can therefore always recover the parts of $\mu$ that are removed
+% because of the representation of $\mu$ in the column space of $\mat{Q}_x$.
+
+% \section{Multi-scale optimal transform}
+
+% Suppose we aga
+
+
+% \section{Two ensembles}
+
+% Suppose that we have two ensembles representing the state $x$.
+% One ensemble, $\mat{X}_c$ will have many members, but will have a lower
+% resolution and only represent large scale structures of the state.
+% The other ensemble, $\mat{X}$ will have fewer members, but will
+% have a finer resolution and therefore be able to represent fine scale
+% structures of the state.
+% We then have,
+% \[
+%   \dim \mat{X}_c = N_{x_c}, N_{e_c}
+% \]
+% \[\text{and}\]
+% \[
+%   \dim \mat{X} = N_x, N_e
+% \]
+% where $N_{x_c} < N_x$ and $N_{e_c} > N_e$.
+
+% Taking the singular value decomposition of the ensemble of
+% coarse perturbations, $\mat{X}_c^*$, will give us the eigenvalues and
+% eigenvectors of the sample covariance matrix derived from $\mat{X}_c$.
+% \[
+%   \mat{X}_c^{*} = \left( \mat{X}_c - \frac{1}{N}\bar{\mat{X}}_c
+%   \mat{1}_c \right) / \sqrt{N_{e_c} - 1}
+% \]
+% \[
+%   \mat{Q}_c \mat{\Lambda}_c^{1/2} \mat{V}^T_{temp} = \mat{X}_c^*
+% \]
+% \[
+%   \mat{Q}_c \mat{\Lambda}_c \mat{Q}_c^T = (\mat{X}_c^*)
+%   {(\mat{X}_c^*)}^{T}
+% \]
+% where $\mat{1}_c$ is a matrix of all ones of with the same dimension as
+% $\mat{X}_c$ and $\bar{\mat{X}}_c$ is the sample mean of $\mat{X}_c$.
+% Assuming that we know $\mat{Q}_y$ and $\mat{\Lambda}_y$, we can then
+% calculate $\mat{U}_c$ and $\mat{V}_c$,
+% \[
+%   \mat{U}_c \mat{\Sigma}_c \mat{V}_c^T = \mat{\Lambda}^{-1/2}_y
+%   \mat{Q}_y^T \mat{H} \mat{Q}_c \mat{\Lambda}^{1/2}_c.
+% \]
+% This gives us the optimal linear transform, or as much of it as we
+% deem appropriate to keep, for the coarse scale system.
+% We can then use this to calculate the coarse parts of the optimal
+% linear transform for the fine scale system.
+% To do this, we can use $\mat{Q}_c$, $\mat{U}_c$, and $\mat{V}_c$, but
+% must recalculate $\mat{\Lambda}_c$ and $\mat{\Sigma}_c$ for their fine
+% state equivalents $\mat{\Lambda}_{fc}$ and $\mat{\Sigma}_{fc}$.
+
+% In order to calculate $\mat{\Lambda}_{fc}$ we must first interpolate
+% the eigenvectors $\mat{Q}_c$ to the fine state space resulting in
+% $\mat{Q}_{fc}$.
+% The interpolated eigenvectors will need to be modified so that they
+% form a orthonormal set in fine space.
+% Once this is done, we can then calculate their corresponding
+% eigenvalues by assuming that the interpolated eigenvectors are left
+% singular values of the ensemble perturbations for $\mat{X}$,
+% $\mat{X}^*$:
+% \[
+%   \lambda_{fc}[i]^{1/2} = \lVert q_{fc}[i]^T \mat{X}^* \rVert
+% \]
+% where $\lambda_{fc}[i]$ is the eigenvalue of $\mat{X}^*\left(
+%   \mat{X}^* \right)^T$ corresponding to the eigenvector $q_{fc}[i]$.
+% We can then be arrange all of the eigenvalues and vectors into the
+% matrices $\mat{\Lambda}_{fc}$ and $\mat{Q}_{fc}$.
+% We can calculate the singular values by assuming that $\mat{U}_c$
+% and $\mat{V}_c$ have columns made of left and right singular vectors
+% of $\mat{\Lambda}_y^{1/2} \mat{Q}_y^T \mat{H} \mat{Q}_{fc}
+% \mat{\Lambda}_{fc}^{-1/2}$:
+% \[
+%   \sigma_{fc}[i] = u_c[i]^T \mat{\Lambda}_y^{1/2}
+% \mat{Q}_y^T \mat{H} \mat{Q}_{fc} \mat{\Lambda}_{fc}^{-1/2} v_{c}[i]
+% \]
+% where $\sigma_{fc}[i]$ is the singular value corresponding to the left
+% and right singular vectors $u_c[i]$ and $v_c[i]$.
+% These singular values can then be arranged in the matrix
+% $\mat{\Sigma}_{fc}$.
+
+% Now that these quantities have been calculated, we can then form the
+% optimal linear transforms and their right inverses for our fine system
+% corresponding to the large scales:
+% \[
+%   \mat{T}_{xl} = \mat{V}_c^T \mat{\Lambda}_{fc}^{-1/2} \mat{Q}_{fc}^T
+% \]
+% \[
+%   \mat{T}_{xl}^{-R} = \mat{Q}_{fc} \mat{\Lambda}_{fc}^{1/2} \mat{V}_c
+% \]
+% \[
+%   \mat{T}_{yl} = \mat{U}_c^T \mat{\Lambda}_{y}^{-1/2} \mat{Q}_{y}^T
+% \]
+% \[
+%   \mat{T}_{yl}^{-R} = \mat{Q}_{y} \mat{\Lambda}_{y}^{1/2} \mat{U}_c
+% \]
+
+% We can also calculate the linear transform in our fine system
+% corresponding to our short scales.
+% Since the above transforms will assimilate the information
+% corresponding to the long scales, we are able to apply localization
+% that is appropriate for our short scales when calculating the
+% following transforms.
+% This process is very similar to the standard reduced rank optimal
+% linear transform, accept that we must ensure that certain vectors are
+% orthogonal to those used above.
+
+% We start by calculating and localizing the sample covariance based on
+% our fine ensemble $\mat{X}$:
+% \[
+%   \mat{P}_{loc} = \mat{L_s} \circ \mat{X}^* \left( \mat{X}^* \right)^T
+% \]
+
+
+
+% \section{Equivalence to standard KF}
+
+% Sticking with the above notation, we can calculate the standard Kalman
+% filter update and the corresponding equations:
+% \[
+%   \mat{K} = \mat{P}\mat{H}^T (\mat{H} \mat{P} \mat{H}^T + \mat{R})^{-1},
+% \]
+% \[
+%   \mu^a = \mu + \mat{K} (y - \mat{H} \mu),
+% \]
+% \[
+%   \mat{P}^a = (\mat{I} - \mat{K} \mat{H}) \mat{P}.
+% \]
+% Alternatively, in terms of our transformed equations, we have:
+% \[
+%   \tilde{\mat{K}} = \mat{I}_{N_{\lambda_x}} \mat{\Sigma}^T ( \mat{\Sigma} \mat{I}_{N_{\lambda_x}}
+%   \mat{\Sigma}^T + \mat{I}_{N_{\lambda_y}})^{-1} = \mat{\Sigma}^T (\mat{\Sigma}
+%   \mat{\Sigma}^T + \mat{I}_{N_{\lambda_y}})^{-1}
+% \]
+% \[
+%   \tilde{\mu}^a = \tilde{\mu} + \tilde{\mat{K}}(\tilde{y} + \mat{\Sigma} \tilde{\mu})
+% \]
+% \[
+%   \tilde{\mat{P}}^a = (\mat{I}_{N_{\lambda_x}} - \tilde{\mat{K}} \mat{\Sigma}) \tilde{\mat{P}}.
+% \]
+% We can then convert $\tilde{x}^a$ and $\tilde{\mat{P}}^a$ back to the
+% original $x$-space through,
+% \[
+%   \mu^a_1 = \mat{T}_x^{-R} \tilde{\mu}^a
+% \]
+% \[
+%   \text{ and }
+% \]
+% \[
+%   \mat{P}^a_1 = \mat{T}_x^{-R} \tilde{\mat{P}}^a \left(\mat{T}_x^{-R}\right)^T.
+% \]
+
+% Assuming that the ranks of $\mat{P}$ and $\mat{R}$ are $N_{\lambda_x}$
+% and $N_{\lambda_y}$ respectively,
+% \[
+%   \tilde{\mat{K}} = \mat{\Sigma}^T (\mat{\Sigma} \mat{\Sigma}^T +
+%   \mat{I}_{N_{\lambda_y}})^{-1}
+% \]
+% \[
+%   \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{T}_x^T (\mat{T}_y \mat{H}
+%   \mat{T}_x^{-R})^T \left((\mat{T}_y \mat{H} \mat{T}_x^{-R})(\mat{T}_y
+%   \mat{H} \mat{T}_x^{-R})^T + \mat{T}_y \mat{R} \mat{T}_y^T \right)^{-1}
+% \]
+% \[
+%   \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{T}_x^T \left( \mat{T}_x^{-R}
+%   \right)^T \mat{H}^T \mat{T}_y^T
+%   \left( \mat{T}_y \mat{H} \mat{T}_x^{-R} \left( \mat{T}_x^{-R}
+%     \right)^T \mat{H}^T \mat{T}_y^T + \mat{T}_y \mat{R} \mat{T}_y^T \right)^{-1}
+% \]
+% \[
+%   \tilde{\mat{K}} = \mat{T}_x \mat{P} \mat{Q}_x \mat{Q}_x^T \mat{H}^T \mat{T}_y^T
+%   \left( \mat{T}_y \left( \mat{H} \mat{Q}_x \Lambda_x \mat{Q}_x^T
+%       \mat{H}^T + \mat{R}\right) \mat{T}_y^T \right)^{-1}
+% \]
+% If we assume that $\mu$ is in the span of $\mat{Q}_x$, we have,
+% \[
+%    x^a_1 = \mat{T}_x^{-R} \tilde{x}^a
+% \]
+% \[
+%    x^a_1 = \mat{T}_x^{-R} \left( \tilde{x} + \tilde{K} \right)
+% \]
+
+
+% \section{Transformation from coarse OLD}
+
+
+
+% We have two ensembles representing the same system.
+% The ensemble $X$ is a coarse representation of the state, but has many ensemble members.
+% The ensemble $Z$ is a fine representation of the sates, but has few ensemble members.
+% \[
+% \dim{X} = N_x, N_{ex}
+% \]
+% \[
+% \dim{Z} = N_z, N_{ez}
+% \]
+
+% In order to find the eigenvalues and eigenvectors of the sample correlation of $X$, we take the singular value decomposition of $\tilde{X} = {(N_{ex} - 1)}^{-1/2} (X - \bar{X})/ \sd(X)$, where $\sd(X)$ is the standard deviation of each element of $X$.
+% \[
+% U_x S_x V_x^T = \tilde{X}
+% \]
+% This means that,
+% \[
+% U_x S_z^2 U_x^T = \hat{C}_x
+% \]
+% where $\hat{C}_x$ is the sample correlation of $X$.
+
+% We want to then use $U_x$, or its leading columns, to estimate the leading $U_z$.
+% To do this, we interpolate $U_x$ to the $z$ space and then use QR factorization to ensure the interpolated $u_x$'s are orthonormal:
+% \[
+% U_{x} = \interp (U_x)
+% \]
+% \[
+% U_{xi}, R = \QR (U_{xi}).
+% \]
+% We then must choose how many of the columns of $U_{xi}$ should be used.
+% The best way to make this choice is unclear.
+% A few ways that I am considering are:
+% \begin{enumerate}
+% \item Keep $U_{xi}$ based on the cumulative sum of their corresponding eigenvalues.
+% \item Keep $U_{xi}$ based on the rate of change of their corresponding eigenvalues.
+% \item Keep $U_{xi}$ based on some measure of the length scale produced by the low rank approximation of $\hat{C}_x$ and the residual.
+% \item Keep $U_{xi}$ based on how orthogonal the interpolated vector is in $z$ space before orthogonalization.
+% \end{enumerate}
+% It should be noted that keeping all columns can be detrimental to the assimilation process.
+% If some of the columns of $U_{xi}$ are representing small scale structures, then in the following steps they will still be used to represent some of these small scale structures.
+
+% After choosing which columns of $U_{xi}$ to keep, we must determine what eigenvalues they should have.
+% We do this by taking $\lambda = u_{xi}^T \hat{C}_z u_{xi}$ as the eigenvalue of $u{xi}$ for our approximation of $C_z$.
+% Alternatively, we can take $\lambda = {(\tilde{Z}^T u_{xi})}^T (\tilde{Z}^T u_{xi})$ where $\tilde{Z}$ is defined similarly as $\tilde{X}$.
+% This will give us the leading eigenvectors and an approximation of their eigenvalues of $C_Z$.
+
+% These eigenvectors and eigenvalues represent the large scale structure of the problem.
+% To then find the small scales of the problem, we take
+% \[
+% C_z^\bot = \hat{C}_z - C_z^\parallel
+% \]
+% where
+% \[
+% C_z^\parallel = U_{xi} \Lambda_{xi}  U_{xi}^T
+% \]
+% and $\Lambda_{xi}$ is the diagonal matrix with the $\lambda$s described above on the diagonal.
+% We can then localize $C_z^\bot$ to get at the small scales that are represented in $Z$.
+
+% We must choose how to localize $C_z^\bot$.
+% One reasonable expectation is that the scales in $C_z^\bot$ will be shorter or similar to $N_z/N_x$.
+% This choice will also be affected by the choice of how many columns of $U_{xi}$ to keep.
+% Once the localization matrix $L$ is chosen, we can then generate our localized correlation matrix as:
+% \[
+% C_z^{loc} = C_z^\parallel + L \circ C_Z^\bot
+% \]
+% and the corresponding covariance matrix as:
+% \[
+% P_z^{loc} = D_z C_z^{loc} D_z.
+% \]
+% where $D_z$ is the diagonal matrix with sample standard deviations of $Z$ on the diagonal.
+
+% We can then find the leading eigenvectors and eigenvalues of $C_z^{loc}$:
+% \[
+% Q \Lambda Q^T = C_z^{loc}
+% \]
+% and use them to transform the $z$ variable.
+% First, we must calculate a whitening transformation
+% \[
+% T_w = \Lambda^{-1/2} Q^T
+% \]
+% and its right inverse
+% \[
+% T_w^i = Q \Lambda^{1/2}
+% \]
+% and the singular value decomposition
+% \[
+% U \Sigma V^T = R^{-1/2} H T_w^i.
+% \]
+% We can then define transformations for both $z$ and $y$
+% \[
+% T_z = V^T T_w
+% \]
+% \[
+% T_y = U^T R^{-1/2}
+% \]
+
+% We then know $z^* = T_z z$ and $y^* = T_y y$ have identity covariance matrices and
+% \[
+% y^* = \Sigma z^* + \epsilon^*
+% \]
+% \[
+% U^T R^{-1/2} y = \Sigma V^T \Lambda^{-1/2} Q^T z + \epsilon^*
+% \]
+% \[
+% y = R^{1/2} U \Sigma V^T \Lambda^{-1/2} Q^T z  + \epsilon
+% \]
+% \[
+% y = R^{1/2}R^{-1/2} H Q \Lambda^{1/2} \Lambda^{-1/2} Q^T z  + \epsilon
+% \]
+% \[
+% y = H z  + \epsilon
+% \]
+% The question is: can I do this better?
+% Specifically:
+% \begin{enumerate}
+% \item Can I calculate the eigenvectors and values of $C^{loc}$ without generating $C^\parallel$ or $C^\bot$ explicitly?
+% \item Can I calculate the eigenvectors and values of $P$ from those of $C$ without generating $C$?
+% \item Can I calculate the singular vectors and values of $R^{-1/2} H T_w^i$ from the singular value decomposition of $R$, $H$, and $T_w^i$?
+% \end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
