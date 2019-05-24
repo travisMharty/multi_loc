@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  23 MAY 2019 17:25
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/MacPorts 2018.47642_8) (preloaded format=pdflatex 2019.1.23)  24 MAY 2019 08:49
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -400,27 +400,36 @@ Package caption Info: End \AtBeginDocument code.
 
 [1
 
-{/opt/local/var/db/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
-(./multi_opt_loc.aux) ) 
+{/opt/local/var/db/texmf/fonts/map/pdftex/updmap/pdftex.map}]
+./multi_opt_loc.tex:180: Extra }, or forgotten $.
+l.180 ...{U}_l$, $\mat{U}_s$, and $\mat{U}_{\bot}}
+                                                  $
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+[2] (./multi_opt_loc.aux) ) 
 Here is how much of TeX's memory you used:
- 4579 strings out of 493762
- 68227 string characters out of 6152599
- 147958 words of memory out of 5000000
- 8229 multiletter control sequences out of 15000+600000
+ 4577 strings out of 493762
+ 68187 string characters out of 6152599
+ 147942 words of memory out of 5000000
+ 8227 multiletter control sequences out of 15000+600000
  9418 words of font info for 34 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
  44i,10n,43p,280b,190s stack positions out of 5000i,500n,10000p,200000b,80000s
-</opt/local/share/texmf-texlive/fonts/type1/public/amsfo
-nts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/c
-m/cmex10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmm
-i10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi8.pf
-b></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pfb></op
-t/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.pfb></opt/loca
-l/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></opt/local/shar
-e/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/local/share/texmf
--texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/texmf-texl
-ive/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
-Output written on multi_opt_loc.pdf (2 pages, 99548 bytes).
+</opt/local/share/texmf-texlive/fonts/type1/public/a
+msfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfon
+ts/cm/cmex10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm
+/cmmi10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi
+8.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pfb>
+</opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr12.pfb></opt/
+local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr17.pfb></opt/local/
+share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/local/share/t
+exmf-texlive/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/local/share/texmf-
+texlive/fonts/type1/public/amsfonts/cm/cmsy8.pfb>
+Output written on multi_opt_loc.pdf (2 pages, 98691 bytes).
 PDF statistics:
  51 PDF objects out of 1000 (max. 8388607)
  36 compressed objects within 1 object stream
