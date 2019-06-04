@@ -356,7 +356,7 @@ def fft_exp_1d(Nx, dx, rho0, nu=None):
     k = k / (Nx * dx)
     a = rho0
     eig_val = (
-        (2.0 * a) / (1.0 + (2.0 * np.pi * k * a)**2))
+       (2.0 * a) / (1.0 + (2.0 * np.pi * k * a)**2))
     eig_val = eig_val/dx
     return eig_val
 
@@ -664,3 +664,60 @@ def eig_2d_covariance(rho_x, rho_y, rho0_x, rho0_y, tol,
     eig_val = eig_val[:eig_num]
     eig_vec = eig_vec[:, :eig_num]
     return eig_val, eig_vec
+
+
+def two_scale_circulant(Nz, dz, rho0_l, rho0_s, a_l, correlation_fun):
+    eig_val_l, eig_vec_l, P_l, sort_index = generate_circulant(
+        Nz, dz, rho0_l, correlation_fun,
+        return_Corr=True, return_sort_ind=True)
+    eig_val_l = eig_val_l / eig_val_l.mean()
+    sort_index = np.argsort(sort_index)
+    eig_val_l = eig_val_l[sort_index]
+    eig_vec_l = eig_vec_l[:, sort_index]
+    P_l = eig_vec_l @ np.diag(eig_val_l) @ eig_vec_l.conj().T
+    P_l = P_l.real
+
+    eig_val_s, eig_vec_s, P_s, sort_index = generate_circulant(
+        Nz, dz, rho0_s, correlation_fun,
+        return_Corr=True, return_sort_ind=True)
+    eig_val_s = eig_val_s / eig_val_s.mean()
+    sort_index = np.argsort(sort_index)
+    eig_val_s = eig_val_s[sort_index]
+    eig_vec_s = eig_vec_s[:, sort_index]
+    P_s = eig_vec_s @ np.diag(eig_val_s) @ eig_vec_s.conj().T
+    P_s = P_s.real
+
+    Pz = a_l * P_l + (1 - a_l) * P_s
+
+    return Pz
+
+
+def two_scale_hetero(Nz, dz, rho0_l, rho0_s,
+                     correlation_fun, std_l):
+    eig_val_l, eig_vec_l, P_l, sort_index = generate_circulant(
+        Nz, dz, rho0_l, correlation_fun,
+        return_Corr=True, return_sort_ind=True)
+    eig_val_l = eig_val_l / eig_val_l.mean()
+    sort_index = np.argsort(sort_index)
+    eig_val_l = eig_val_l[sort_index]
+    eig_vec_l = eig_vec_l[:, sort_index]
+    P_l = eig_vec_l @ np.diag(eig_val_l) @ eig_vec_l.conj().T
+    P_l = P_l.real
+
+    eig_val_s, eig_vec_s, P_s, sort_index = generate_circulant(
+        Nz, dz, rho0_s, correlation_fun,
+        return_Corr=True, return_sort_ind=True)
+    eig_val_s = eig_val_s / eig_val_s.mean()
+    sort_index = np.argsort(sort_index)
+    eig_val_s = eig_val_s[sort_index]
+    eig_vec_s = eig_vec_s[:, sort_index]
+    P_s = eig_vec_s @ np.diag(eig_val_s) @ eig_vec_s.conj().T
+    P_s = P_s.real
+
+    D_l = np.diag(std_l)
+    std_s = np.sqrt(1 - std_l**2)
+    D_s = np.diag(std_s)
+
+    Pz = D_l @ P_l @ D_l + D_s @ P_s @ D_s
+
+    return Pz
