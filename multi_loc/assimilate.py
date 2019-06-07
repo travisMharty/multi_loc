@@ -794,3 +794,54 @@ def cycle_KF_LM3(*, X0_ens, Z0_ens, X_obs_ts, Z_obs_ts, dt,
         X0_ens = temp_Xa_ts.isel(time=-1).values
         Z0_ens = temp_Za_ts.isel(time=-1).values
     return Xa_ens_ts, Za_ens_ts
+
+
+def cycle_KF_LM3_stdrd(*, Z0_ens, Z_obs_ts, dt,
+                       R_Z, H_Z,
+                       rho_Z=None):
+    Za_ens_ts = []
+    t_obs = Z_obs_ts['time'].values
+    dt_obs = t_obs[1] - t_obs[0]
+    t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
+    N_Z, N_eZ = Z0_ens.shape
+    Zloc = np.arange(N_Z)
+    Zens_num = np.arange(N_eZ)
+    for at in t_obs:
+        print(at)
+        Za_ens = stdrd_enkf(
+            rho_Z=rho_Z,
+            Z_ens=Z0_ens, Z_obs=Z_obs_ts.sel(time=at).values,
+            H_Z=H_Z, R_Z=R_Z)
+        print('assimed')
+
+        temp_Za_ts = utilities.return_LM3_ens_data(
+            Za_ens, t_cycle)
+        print('pushed Z')
+        temp_Za_ts = xr.DataArray(
+            data=temp_Za_ts,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_cycle + at})
+        Za_ens_ts.append(temp_Za_ts)
+        Z0_ens = temp_Za_ts.isel(time=-1).values
+    return Za_ens_ts
+
+
+def stdrd_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
+               a=None,rho_Z=None):
+    N_Z, N_eZ = Z_ens.shape
+    P_Z = np.cov(Z_ens)
+    if a is not None:
+        P_Z *= (1 + a)
+        mu_Z = np.mean(Z_ens, axis=-1)
+        Z_ens -= mu_Z[:, None]
+        Z_ens *= np.sqrt(1 + a)
+        Z_ens += mu_Z[:, None]
+    if rho_Z is not None:
+        P_Z *= rho_Z
+    K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
+    Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
+
+    Z_ens_a = Z_ens + K @ (Z_obs_ens - H_Z @ Z_ens)
+    return Z_ens_a
