@@ -519,7 +519,11 @@ def return_LM3_coar_ens_data(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b
 
         def this_LM3_coar(X_ens_ravel, t):
             Z_index = int(np.floor(t/dt))
+            Z_index = np.min([Z_index,
+                              Z0_ens_ts.shape[-1] - 1])
             X_ens = X_ens_ravel.reshape(N_Xc, N_eXpZ)
+            # print('t/dt: ', t/dt)
+            # print('Z_index: ', Z_index)
             dXdt = LM3_coar(X_ens,
                             Z0_ens_ts[:, ens_count, Z_index][:, None],
                             coarse=coarse,

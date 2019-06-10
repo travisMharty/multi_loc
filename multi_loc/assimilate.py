@@ -798,7 +798,8 @@ def cycle_KF_LM3(*, X0_ens, Z0_ens, X_obs_ts, Z_obs_ts, dt,
 
 def cycle_KF_LM3_stdrd(*, Z0_ens, Z_obs_ts, dt,
                        R_Z, H_Z,
-                       rho_Z=None):
+                       rho_Z=None, rho0_Z=None,
+                       alpha=None):
     Za_ens_ts = []
     t_obs = Z_obs_ts['time'].values
     dt_obs = t_obs[1] - t_obs[0]
@@ -807,16 +808,16 @@ def cycle_KF_LM3_stdrd(*, Z0_ens, Z_obs_ts, dt,
     Zloc = np.arange(N_Z)
     Zens_num = np.arange(N_eZ)
     for at in t_obs:
-        print(at)
+        # print(at)
         Za_ens = stdrd_enkf(
             rho_Z=rho_Z,
             Z_ens=Z0_ens, Z_obs=Z_obs_ts.sel(time=at).values,
-            H_Z=H_Z, R_Z=R_Z)
-        print('assimed')
+            H_Z=H_Z, R_Z=R_Z, a=alpha)
+        # print('assimed')
 
         temp_Za_ts = utilities.return_LM3_ens_data(
             Za_ens, t_cycle)
-        print('pushed Z')
+        # print('pushed Z')
         temp_Za_ts = xr.DataArray(
             data=temp_Za_ts,
             dims=('loc', 'ens_num', 'time'),
@@ -831,13 +832,12 @@ def cycle_KF_LM3_stdrd(*, Z0_ens, Z_obs_ts, dt,
 def stdrd_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
                a=None,rho_Z=None):
     N_Z, N_eZ = Z_ens.shape
-    P_Z = np.cov(Z_ens)
     if a is not None:
-        P_Z *= (1 + a)
         mu_Z = np.mean(Z_ens, axis=-1)
         Z_ens -= mu_Z[:, None]
         Z_ens *= np.sqrt(1 + a)
         Z_ens += mu_Z[:, None]
+    P_Z = np.cov(Z_ens)
     if rho_Z is not None:
         P_Z *= rho_Z
     K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
