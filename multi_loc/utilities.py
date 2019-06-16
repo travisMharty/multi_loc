@@ -533,7 +533,8 @@ def return_LM3_coar_ens_data(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b
             return dXdt.ravel()
 
         this_slice = slice(ens_count*N_eXpZ, (ens_count+1)*N_eXpZ)
-        aX_ens = integrate.odeint(this_LM3_coar, X0_ens[:, this_slice].ravel(), t)
+        aX_ens = integrate.odeint(this_LM3_coar,
+                                  X0_ens[:, this_slice].ravel(), t)
         aX_ens = aX_ens.T
         aX_ens = aX_ens.reshape(N_Xc, N_eXpZ, N_t)
         X_ens[:, this_slice, :] = aX_ens
