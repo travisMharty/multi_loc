@@ -373,7 +373,7 @@ def bracket_1(XY, K):
     return T1 + T2
 
 
-def return_LM3_data(Z0, t, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+def return_LM3_data_sp(Z0, t, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
     if alpha is None:
         alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
     if beta is None:
@@ -435,7 +435,7 @@ def lin_interp_matrix(N, coarse):
     return M
 
 
-def return_LM3_ens_data(Z0_ens, t, K=32, I=12, F=15,
+def return_LM3_ens_data_sp(Z0_ens, t, K=32, I=12, F=15,
                         b=10, c=2.5, alpha=None, beta=None):
     if alpha is None:
         alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
@@ -481,7 +481,7 @@ def LM3_coar(X, Z, coarse, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None)
     return dXdt
 
 
-def return_LM3_coar_data(X0, t, Z, coarse=8,
+def return_LM3_coar_data_sp(X0, t, Z, coarse=8,
                          K=32, I=12, F=15,
                          b=10, c=2.5, alpha=None, beta=None):
     if alpha is None:
@@ -498,6 +498,175 @@ def return_LM3_coar_data(X0, t, Z, coarse=8,
         return dXdt
     X = integrate.odeint(this_LM3_coar, X0, t)
     X = X.T
+    return X
+
+
+def return_LM3_coar_ens_data_sp(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+
+    N_t = t.size
+    dt = t[1] - t[0]
+    N_Xc, N_eXc = X0_ens.shape
+    N_Z, N_eZ, N_Zt = Z0_ens_ts.shape
+    N_eXpZ = N_eXc // N_eZ
+
+    X_ens = np.ones([N_Xc, N_eXc, N_t])
+
+    for ens_count in range(N_eZ):
+
+        def this_LM3_coar(X_ens_ravel, t):
+            Z_index = int(np.floor(t/dt))
+            Z_index = np.min([Z_index,
+                              Z0_ens_ts.shape[-1] - 1])
+            X_ens = X_ens_ravel.reshape(N_Xc, N_eXpZ)
+            # print('t/dt: ', t/dt)
+            # print('Z_index: ', Z_index)
+            dXdt = LM3_coar(X_ens,
+                            Z0_ens_ts[:, ens_count, Z_index][:, None],
+                            coarse=coarse,
+                            K=K, I=I, F=F,
+                            b=b, c=c,
+                            alpha=alpha, beta=beta)
+            return dXdt.ravel()
+
+        this_slice = slice(ens_count*N_eXpZ, (ens_count+1)*N_eXpZ)
+        aX_ens = integrate.odeint(this_LM3_coar,
+                                  X0_ens[:, this_slice].ravel(), t)
+        aX_ens = aX_ens.T
+        aX_ens = aX_ens.reshape(N_Xc, N_eXpZ, N_t)
+        X_ens[:, this_slice, :] = aX_ens
+    return X_ens
+
+
+def RK4(f, y, dt, t):
+    K1 = dt * f(y, t)
+    K2 = dt * f(y + K1/2, t + dt/2)
+    K3 = dt * f(y + K2/2, t + dt/2)
+    K4 = dt * f(y + K3, t + dt/2)
+    y1 = y + (K1 + 2*K2 + 2*K3 + K4)/6
+    return y1
+
+
+def return_LM3_data(Z0, dt, T, dt_obs,
+                    K=32, I=12, F=15, b=10, c=2.5,
+                    alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    N_Z = Z0.size
+    def this_LM3(Z, t):
+        dZdt = LM3(Z, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt
+    Nz = Z0.size
+    Nt = int(T/dt) + 1
+    Nto = int(T/dt_obs) + 1
+    Z = np.ones([Nz, Nto])*np.nan
+    every = int(dt_obs/dt)
+    #print(Z0)
+    Z[:, 0] = Z0.copy()
+    Zprev = Z0.copy()
+    count_obs = 0
+    every_print = int(Nt/10)
+    if every != 1:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            if (count + 1) % every == 0:
+                count_obs += 1
+                Z[:, count_obs] = Zprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
+    else:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            Z[:, count + 1] = Zprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
+    return Z
+
+
+def return_LM3_ens_data(Z0_ens, dt, T, dt_obs, K=32, I=12, F=15,
+                        b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    Nz, Nez = Z0_ens.shape
+    Nt = int(T/dt) + 1
+    Nto = int(T/dt_obs) + 1
+
+    def this_LM3(Z_1d_ens, t):
+        Z_ens = Z_1d_ens.reshape(Nz, Nez)
+        dZdt = LM3(Z_ens, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt.ravel()
+    Z_ens_ts = np.ones([Nz, Nez, Nto])*np.nan
+    every = int(dt_obs/dt)
+    #print(Z0)
+    Z_ens_ts[:, :,  0] = Z0_ens.copy()
+    Zprev = Z0_ens.ravel()
+    count_obs = 0
+    every_print = int(Nt/10)
+    if every != 1:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            if (count + 1) % every == 0:
+                count_obs += 1
+                Z_ens_ts[:, :, count_obs] = Zprev.reshape(Nz, Nez)
+            # if count + 1 % every_print == 0:
+            #     print((ii*100)//Nt + 1)
+    else:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            Z_ens_ts[:, :, count] = Zprev.reshape(Nz, Nez)
+            # if count + 1 % every_print == 0:
+            #     print((ii*100)//Nt + 1)
+    return Z_ens_ts
+
+
+def return_LM3_coar_data(X0, dt, T, dt_obs, Z, tz,
+                         coarse=8,
+                         K=32, I=12, F=15,
+                         b=10, c=2.5, alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    dtz = tz[1] - tz[0]
+    def this_LM3_coar(X, t):
+        Z_index = int(np.floor(t / dtz))
+        Z_index = np.min([Z_index,
+                          tz.size - 1])
+        dXdt = LM3_coar(X, Z[:, Z_index], coarse=coarse, K=K,
+                        I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dXdt
+
+    Nx = X0.size
+    Nt = int(T/dt) + 1
+    Nto = int(T/dt_obs) + 1
+    X = np.ones([Nx, Nto])*np.nan
+    every = int(dt_obs/dt)
+    #print(Z0)
+    X[:, 0] = X0.copy()
+    Xprev = X0.copy()
+    count_obs = 0
+    every_print = int(Nt/10)
+    if every != 1:
+        for count in range(Nt - 1):
+            Xprev = RK4(this_LM3_coar, Xprev, dt, tz[count])
+            if (count + 1) % every == 0:
+                count_obs += 1
+                X[:, count_obs] = Xprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
+    else:
+        for count in range(Nt - 1):
+            Xprev = RK4(this_LM3_coar, Xprev, dt, tz[count])
+            X[:, count] = Xprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
     return X
 
 
@@ -522,8 +691,6 @@ def return_LM3_coar_ens_data(X0_ens, t, Z0_ens_ts, coarse=8, K=32, I=12, F=15, b
             Z_index = np.min([Z_index,
                               Z0_ens_ts.shape[-1] - 1])
             X_ens = X_ens_ravel.reshape(N_Xc, N_eXpZ)
-            # print('t/dt: ', t/dt)
-            # print('Z_index: ', Z_index)
             dXdt = LM3_coar(X_ens,
                             Z0_ens_ts[:, ens_count, Z_index][:, None],
                             coarse=coarse,

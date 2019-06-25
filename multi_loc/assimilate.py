@@ -3,6 +3,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import xarray as xr
+from scipy import ndimage
 from sklearn.utils.extmath import randomized_svd
 from multi_loc import covariance, utilities
 
@@ -796,52 +797,210 @@ def cycle_KF_LM3(*, X0_ens, Z0_ens, X_obs_ts, Z_obs_ts, dt,
     return Xa_ens_ts, Za_ens_ts
 
 
-def cycle_KF_LM3_stdrd(*, Z0_ens, Z_obs_ts, dt,
-                       R_Z, H_Z,
+def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
+                       Tkf, dt_kf,
+                       dt_rk,
+                       Rz, Hz,
                        rho_Z=None, rho0_Z=None,
                        alpha=None):
-    Za_ens_ts = []
-    t_obs = Z_obs_ts['time'].values
-    dt_obs = t_obs[1] - t_obs[0]
-    t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
-    N_Z, N_eZ = Z0_ens.shape
-    Zloc = np.arange(N_Z)
-    Zens_num = np.arange(N_eZ)
-    for at in t_obs:
-        # print(at)
-        Za_ens = stdrd_enkf(
-            rho_Z=rho_Z,
-            Z_ens=Z0_ens, Z_obs=Z_obs_ts.sel(time=at).values,
-            H_Z=H_Z, R_Z=R_Z, a=alpha)
-        # print('assimed')
+    # t_obs = Zobs_ts['time'].values
+    # dt_obs = t_obs[1] - t_obs[0]
+    # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
 
-        temp_Za_ts = utilities.return_LM3_ens_data(
-            Za_ens, t_cycle)
-        # print('pushed Z')
-        temp_Za_ts = xr.DataArray(
-            data=temp_Za_ts,
-            dims=('loc', 'ens_num', 'time'),
-            coords={'loc': Zloc,
-                    'ens_num': Zens_num,
-                    'time': t_cycle + at})
-        Za_ens_ts.append(temp_Za_ts)
-        Z0_ens = temp_Za_ts.isel(time=-1).values
-    return Za_ens_ts
+    Nz, Nez = Z0ens.shape
+    Zloc = np.arange(Nz)
+    Zens_num = np.arange(Nez)
+    Nkf = int(Tkf/dt_kf)
+
+    mu_f = np.ones([Nz, Nkf]) * np.nan
+    std_f = mu_f.copy()
+    mu_a = mu_f.copy()
+    std_a = mu_f.copy()
+
+    t_kf = []
+    t=0
+    Zens_f = Z0ens.copy()
+    for count_kf in range(Nkf):
+        Zens_f = utilities.return_LM3_ens_data(
+            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
+        Zens_f = Zens_f[:, :, -1]
+        mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
+        std_f[:, count_kf] = np.std(Zens_f, axis=-1)
+
+        t = dt_kf * (count_kf + 1)
+        t_kf.append(t)
+        Zens_a = stdrd_enkf(
+            rho_Z=rho_Z,
+            Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
+            H_Z=Hz, R_Z=Rz, a=alpha)
+        Zens_f = Zens_a.copy()
+        mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
+        std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+    # t_kf = Zobs_ts.time[]
+    # t_kf = np.linspace(dt_kf, Tkf, int(Tkf/dt_kf))
+    mu_f = xr.DataArray(
+        data=mu_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_f = xr.DataArray(
+        data=std_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    mu_a = xr.DataArray(
+        data=mu_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_a = xr.DataArray(
+        data=std_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    to_return = {
+        'mu_f': mu_f,
+        'std_f': std_f,
+        'mu_a': mu_a,
+        'std_a': std_a
+    }
+    return to_return
 
 
 def stdrd_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
                a=None,rho_Z=None):
-    N_Z, N_eZ = Z_ens.shape
+    Z_ens_copy = Z_ens.copy()
+    N_Z, N_eZ = Z_ens_copy.shape
     if a is not None:
-        mu_Z = np.mean(Z_ens, axis=-1)
-        Z_ens -= mu_Z[:, None]
-        Z_ens *= np.sqrt(1 + a)
-        Z_ens += mu_Z[:, None]
-    P_Z = np.cov(Z_ens)
+        mu_Z = np.mean(Z_ens_copy, axis=-1)
+        Z_ens_copy -= mu_Z[:, None]
+        Z_ens_copy *= np.sqrt(1 + a)
+        Z_ens_copy += mu_Z[:, None]
+    P_Z = np.cov(Z_ens_copy)
     if rho_Z is not None:
         P_Z *= rho_Z
     K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
     Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
 
-    Z_ens_a = Z_ens + K @ (Z_obs_ens - H_Z @ Z_ens)
+    Z_ens_a = Z_ens_copy + K @ (Z_obs_ens - H_Z @ Z_ens_copy)
+    return Z_ens_a
+
+
+def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
+                        Tkf, dt_kf,
+                        dt_rk,
+                        Rz, Hz,
+                        rho_Zc=None,
+                        rho_Zf=None,
+                        alpha=None,
+                        N_laml=None,
+                        smooth_len=None):
+    # t_obs = Zobs_ts['time'].values
+    # dt_obs = t_obs[1] - t_obs[0]
+    # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
+
+    Nz, Nez = Z0ens.shape
+    Zloc = np.arange(Nz)
+    Zens_num = np.arange(Nez)
+    Nkf = int(Tkf/dt_kf)
+
+    mu_f = np.ones([Nz, Nkf]) * np.nan
+    std_f = mu_f.copy()
+    mu_a = mu_f.copy()
+    std_a = mu_f.copy()
+
+    t_kf = []
+    t=0
+    Zens_f = Z0ens.copy()
+
+    for count_kf in range(Nkf):
+        Zens_f = utilities.return_LM3_ens_data(
+            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
+        Zens_f = Zens_f[:, :, -1]
+        mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
+        std_f[:, count_kf] = np.std(Zens_f, axis=-1)
+
+        t = dt_kf * (count_kf + 1)
+        t_kf.append(t)
+        Zens_a = smooth_enkf(
+            Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
+            H_Z=Hz, R_Z=Rz,
+            a=alpha, rho_Zc=rho_Zc,
+            rho_Zf=rho_Zf,
+            N_laml=N_laml,
+            smooth_len=smooth_len)
+        Zens_f = Zens_a.copy()
+        mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
+        std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+
+    mu_f = xr.DataArray(
+        data=mu_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_f = xr.DataArray(
+        data=std_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    mu_a = xr.DataArray(
+        data=mu_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_a = xr.DataArray(
+        data=std_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    to_return = {
+        'mu_f': mu_f,
+        'std_f': std_f,
+        'mu_a': mu_a,
+        'std_a': std_a
+    }
+    return to_return
+
+
+def smooth_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
+                a=None,rho_Zf=None,
+                rho_Zc=None,
+                N_laml=None,
+                smooth_len=None):
+    """
+    Should change eigh to random svd and not calculate Pz_sam
+    """
+    ###
+    Z_ens_copy = Z_ens.copy()
+    N_Z, N_eZ = Z_ens_copy.shape
+    if a is not None:
+        mu_Z = np.mean(Z_ens_copy, axis=-1)
+        Z_ens_copy -= mu_Z[:, None]
+        Z_ens_copy *= np.sqrt(1 + a)
+        Z_ens_copy += mu_Z[:, None]
+    if smooth_len is not None:
+        if smooth_len > 0:
+            Z_ens_smooth = ndimage.gaussian_filter1d(
+                Z_ens_copy, smooth_len, axis=0, mode='wrap')
+        Pz_sam_smooth = np.cov(Z_ens_smooth)
+        Pz_sam = np.cov(Z_ens_copy)
+        if rho_Zc is not None:
+            Pz_sam_smooth *= rho_Zc
+        Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
+        Lam_zsmooth = Lam_zsmooth[::-1]
+        Qzsmooth = Qzsmooth[:, ::-1]
+        Qzl_sam = Qzsmooth[:, :N_laml]
+        Qzl_sam, temp = np.linalg.qr(Qzl_sam)
+        Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
+        Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
+        Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
+        Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
+        if rho_Zf is not None:
+            Pz_orth_sam *=rho_Zf
+            Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
+        P_Z = Pz_Qsam + Pz_orth_sam
+    K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
+    Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
+
+    Z_ens_a = Z_ens_copy + K @ (Z_obs_ens - H_Z @ Z_ens_copy)
     return Z_ens_a
