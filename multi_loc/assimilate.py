@@ -894,7 +894,8 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
                         rho_Zf=None,
                         alpha=None,
                         N_laml=None,
-                        smooth_len=None):
+                        smooth_len=None,
+                        return_ens=False):
     # t_obs = Zobs_ts['time'].values
     # dt_obs = t_obs[1] - t_obs[0]
     # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
@@ -908,6 +909,9 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
     std_f = mu_f.copy()
     mu_a = mu_f.copy()
     std_a = mu_f.copy()
+    if return_ens:
+        ens_f = np.ones([Nz, Nez, Nkf]) * np.nan
+        ens_a = np.ones([Nz, Nez, Nkf]) * np.nan
 
     t_kf = []
     t=0
@@ -919,6 +923,8 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
         Zens_f = Zens_f[:, :, -1]
         mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
         std_f[:, count_kf] = np.std(Zens_f, axis=-1)
+        if return_ens:
+            ens_f[:, :, count_kf] = Zens_f
 
         t = dt_kf * (count_kf + 1)
         t_kf.append(t)
@@ -932,6 +938,8 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
         Zens_f = Zens_a.copy()
         mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
         std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+        if return_ens:
+            ens_a[:, :, count_kf] = Zens_a
 
     mu_f = xr.DataArray(
         data=mu_f,
@@ -953,12 +961,34 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
         dims=('loc', 'time'),
         coords={'loc': Zloc,
                 'time': t_kf})
-    to_return = {
-        'mu_f': mu_f,
-        'std_f': std_f,
-        'mu_a': mu_a,
-        'std_a': std_a
-    }
+    if return_ens:
+        ens_f = xr.DataArray(
+            data=ens_f,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf})
+        ens_a = xr.DataArray(
+            data=ens_a,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf})
+        to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a,
+            'ens_f': ens_f,
+            'ens_a': ens_a
+        }
+    else:
+        to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a
+        }
     return to_return
 
 
