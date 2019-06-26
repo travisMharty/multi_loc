@@ -1029,6 +1029,29 @@ def smooth_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
             Pz_orth_sam *=rho_Zf
             Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
         P_Z = Pz_Qsam + Pz_orth_sam
+    else:
+        I = 12
+        LM3_alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+        Z_ens_smooth = utilities.window_sum_Z(
+            Z_ens_copy, I=I, alpha=LM3_alpha, beta=beta)
+        Pz_sam_smooth = np.cov(Z_ens_smooth)
+        Pz_sam = np.cov(Z_ens_copy)
+        if rho_Zc is not None:
+            Pz_sam_smooth *= rho_Zc
+        Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
+        Lam_zsmooth = Lam_zsmooth[::-1]
+        Qzsmooth = Qzsmooth[:, ::-1]
+        Qzl_sam = Qzsmooth[:, :N_laml]
+        Qzl_sam, temp = np.linalg.qr(Qzl_sam)
+        Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
+        Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
+        Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
+        Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
+        if rho_Zf is not None:
+            Pz_orth_sam *=rho_Zf
+            Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
+        P_Z = Pz_Qsam + Pz_orth_sam
     K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
     Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
 
