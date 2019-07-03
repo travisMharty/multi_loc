@@ -618,9 +618,10 @@ def return_LM3_ens_data(Z0_ens, dt, T, dt_obs, K=32, I=12, F=15,
             # if count + 1 % every_print == 0:
             #     print((ii*100)//Nt + 1)
     else:
+        print('Return all')
         for count in range(Nt - 1):
             Zprev = RK4(this_LM3, Zprev, dt, np.nan)
-            Z_ens_ts[:, :, count] = Zprev.reshape(Nz, Nez)
+            Z_ens_ts[:, :, count + 1] = Zprev.reshape(Nz, Nez)
             # if count + 1 % every_print == 0:
             #     print((ii*100)//Nt + 1)
     return Z_ens_ts
