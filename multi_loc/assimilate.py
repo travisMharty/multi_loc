@@ -802,7 +802,7 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
                        dt_rk,
                        Rz, Hz,
                        rho_Z=None, rho0_Z=None,
-                       alpha=None):
+                       alpha=None, return_ens=False):
     # t_obs = Zobs_ts['time'].values
     # dt_obs = t_obs[1] - t_obs[0]
     # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
@@ -812,58 +812,91 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
     Zens_num = np.arange(Nez)
     Nkf = int(Tkf/dt_kf)
 
-    mu_f = np.ones([Nz, Nkf]) * np.nan
-    std_f = mu_f.copy()
-    mu_a = mu_f.copy()
-    std_a = mu_f.copy()
+    if return_ens:
+        Zens_f_ts = np.ones([Nz, Nez, Nkf]) * np.nan
+        Zens_a_ts = np.ones([Nz, Nez, Nkf]) * np.nan
+    else:
+        mu_f = np.ones([Nz, Nkf]) * np.nan
+        std_f = mu_f.copy()
+        mu_a = mu_f.copy()
+        std_a = mu_f.copy()
 
     t_kf = []
     t=0
     Zens_f = Z0ens.copy()
     for count_kf in range(Nkf):
-        Zens_f = utilities.return_LM3_ens_data(
-            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
-        Zens_f = Zens_f[:, :, -1]
-        mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
-        std_f[:, count_kf] = np.std(Zens_f, axis=-1)
+        try:
+            Zens_f = utilities.return_LM3_ens_data(
+                Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
+            Zens_f = Zens_f[:, :, -1]
+            if return_ens:
+                Zens_f_ts[:, :, count_kf] = Zens_f.copy()
+            else:
+                mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
+                std_f[:, count_kf] = np.std(Zens_f, axis=-1)
 
-        t = dt_kf * (count_kf + 1)
-        t_kf.append(t)
-        Zens_a = stdrd_enkf(
-            rho_Z=rho_Z,
-            Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
-            H_Z=Hz, R_Z=Rz, a=alpha)
-        Zens_f = Zens_a.copy()
-        mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
-        std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+            t = dt_kf * (count_kf + 1)
+            t_kf.append(t)
+            Zens_a = stdrd_enkf(
+                rho_Z=rho_Z,
+                Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
+                H_Z=Hz, R_Z=Rz, a=alpha)
+            Zens_f = Zens_a.copy()
+            if return_ens:
+                Zens_a_ts[:, :, count_kf] = Zens_a.copy()
+            else:
+                mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
+                std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+        except:
+            Zens_f_ts = Zens_f_ts[:, :, :count_kf + 1]
+            Zens_a_ts = Zens_a_ts[:, :, :count_kf + 1]
+            break
     # t_kf = Zobs_ts.time[]
     # t_kf = np.linspace(dt_kf, Tkf, int(Tkf/dt_kf))
-    mu_f = xr.DataArray(
-        data=mu_f,
-        dims=('loc', 'time'),
-        coords={'loc': Zloc,
-                'time': t_kf})
-    std_f = xr.DataArray(
-        data=std_f,
-        dims=('loc', 'time'),
-        coords={'loc': Zloc,
-                'time': t_kf})
-    mu_a = xr.DataArray(
-        data=mu_a,
-        dims=('loc', 'time'),
-        coords={'loc': Zloc,
-                'time': t_kf})
-    std_a = xr.DataArray(
-        data=std_a,
-        dims=('loc', 'time'),
-        coords={'loc': Zloc,
-                'time': t_kf})
-    to_return = {
-        'mu_f': mu_f,
-        'std_f': std_f,
-        'mu_a': mu_a,
-        'std_a': std_a
-    }
+    if return_ens:
+        Zens_f_ts = xr.DataArray(
+            data=Zens_f_ts,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf,})
+        Zens_a_ts = xr.DataArray(
+            data=Zens_a_ts,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf,})
+        to_return = {
+            'Zens_f_ts': Zens_f_ts,
+            'Zens_a_ts': Zens_a_ts
+        }
+    else:
+        mu_f = xr.DataArray(
+            data=mu_f,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        std_f = xr.DataArray(
+            data=std_f,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        mu_a = xr.DataArray(
+            data=mu_a,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        std_a = xr.DataArray(
+            data=std_a,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a
+        }
     return to_return
 
 
