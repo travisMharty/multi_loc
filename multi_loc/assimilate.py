@@ -802,7 +802,9 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
                        dt_rk,
                        Rz, Hz,
                        rho_Z=None, rho0_Z=None,
-                       alpha=None, return_ens=False):
+                       infl=None, return_ens=False,
+                       K=None, I=None, F=None,
+                       b=None, c=None, alpha=None, beta=None):
     # t_obs = Zobs_ts['time'].values
     # dt_obs = t_obs[1] - t_obs[0]
     # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
@@ -815,6 +817,10 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
     if return_ens:
         Zens_f_ts = np.ones([Nz, Nez, Nkf]) * np.nan
         Zens_a_ts = np.ones([Nz, Nez, Nkf]) * np.nan
+        mu_f = np.ones([Nz, Nkf]) * np.nan
+        std_f = mu_f.copy()
+        mu_a = mu_f.copy()
+        std_a = mu_f.copy()
     else:
         mu_f = np.ones([Nz, Nkf]) * np.nan
         std_f = mu_f.copy()
@@ -827,10 +833,13 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
     for count_kf in range(Nkf):
         try:
             Zens_f = utilities.return_LM3_ens_data(
-                Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
+                Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf,
+                K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
             Zens_f = Zens_f[:, :, -1]
             if return_ens:
                 Zens_f_ts[:, :, count_kf] = Zens_f.copy()
+                mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
+                std_f[:, count_kf] = np.std(Zens_f, axis=-1)
             else:
                 mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
                 std_f[:, count_kf] = np.std(Zens_f, axis=-1)
@@ -840,10 +849,12 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
             Zens_a = stdrd_enkf(
                 rho_Z=rho_Z,
                 Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
-                H_Z=Hz, R_Z=Rz, a=alpha)
+                H_Z=Hz, R_Z=Rz, a=infl)
             Zens_f = Zens_a.copy()
             if return_ens:
                 Zens_a_ts[:, :, count_kf] = Zens_a.copy()
+                mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
+                std_a[:, count_kf] = np.std(Zens_a, axis=-1)
             else:
                 mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
                 std_a[:, count_kf] = np.std(Zens_a, axis=-1)
@@ -866,7 +877,31 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
             coords={'loc': Zloc,
                     'ens_num': Zens_num,
                     'time': t_kf,})
+        mu_f = xr.DataArray(
+            data=mu_f,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        std_f = xr.DataArray(
+            data=std_f,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        mu_a = xr.DataArray(
+            data=mu_a,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
+        std_a = xr.DataArray(
+            data=std_a,
+            dims=('loc', 'time'),
+            coords={'loc': Zloc,
+                    'time': t_kf})
         to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a,
             'Zens_f_ts': Zens_f_ts,
             'Zens_a_ts': Zens_a_ts
         }

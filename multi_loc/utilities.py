@@ -588,8 +588,19 @@ def return_LM3_data(Z0, dt, T, dt_obs,
     return Z
 
 
-def return_LM3_ens_data(Z0_ens, dt, T, dt_obs, K=32, I=12, F=15,
-                        b=10, c=2.5, alpha=None, beta=None):
+def return_LM3_ens_data(Z0_ens, dt, T, dt_obs, K=None,
+                        I=None, F=None, b=None, c=None,
+                        alpha=None, beta=None):
+    if K is None:
+        K=32
+    if I is None:
+        I=12
+    if F is None:
+        F=15
+    if b is None:
+        b=10
+    if c is None:
+        c=2.5
     if alpha is None:
         alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
     if beta is None:
