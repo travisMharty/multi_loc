@@ -861,7 +861,7 @@ def cycle_KF_LM3_stdrd(*, Z0ens, Zobs_ts,
         except:
             Zens_f_ts = Zens_f_ts[:, :, :count_kf + 1]
             Zens_a_ts = Zens_a_ts[:, :, :count_kf + 1]
-            break
+            return Zens_f_ts, Zens_a_ts
     # t_kf = Zobs_ts.time[]
     # t_kf = np.linspace(dt_kf, Tkf, int(Tkf/dt_kf))
     if return_ens:
@@ -960,10 +960,12 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
                         Rz, Hz,
                         rho_Zc=None,
                         rho_Zf=None,
-                        alpha=None,
+                        infl=None,
                         N_laml=None,
                         smooth_len=None,
-                        return_ens=False):
+                        infl=None, return_ens=False,
+                        K=None, I=None, F=None,
+                        b=None, c=None, alpha=None, beta=None):
     # t_obs = Zobs_ts['time'].values
     # dt_obs = t_obs[1] - t_obs[0]
     # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
@@ -999,7 +1001,7 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
         Zens_a = smooth_enkf(
             Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
             H_Z=Hz, R_Z=Rz,
-            a=alpha, rho_Zc=rho_Zc,
+            a=infl, rho_Zc=rho_Zc,
             rho_Zf=rho_Zf,
             N_laml=N_laml,
             smooth_len=smooth_len)
