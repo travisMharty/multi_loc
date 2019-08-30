@@ -588,6 +588,109 @@ def return_LM3_data(Z0, dt, T, dt_obs,
     return Z
 
 
+def return_LM3_data_pert(Z_GT, X_GT, Y_GT, pert, dt, T, dt_obs,
+                         K=32, I=12, F=15, b=10, c=2.5,
+                         alpha=None, beta=None, N_long=None,
+                         pert_var=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    N_Z = Z_GT.shape[0]
+    window_l = np.zeros(N_Z)
+    window_l[int((N_Z - N_long)/2): int((N_Z + N_long)/2) + 1] = 1
+    window_l = np.fft.fftshift(window_l)
+    window_s = np.ones(N_Z) - window_l
+    def filter_Z(Z, window):
+        temp = np.fft.fft(Z)
+        temp = np.fft.ifft(temp * window)
+        return temp
+    def this_LM3(Z, t):
+        dZdt = LM3(Z, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt
+    Nt = int(T/dt) + 1
+    Nto = int(T/dt_obs) + 1
+    Z = np.ones([N_Z, Nto])*np.nan
+    every = int(dt_obs/dt)
+    #print(Z0)
+    Z[:, 0] = Z_GT[:, 0] + pert
+    Zprev = Z[:, 0].copy()
+    count_obs = 0
+    every_print = int(Nt/10)
+    for count in range(Nt - 1):
+        Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+        if pert_var == 'Y':
+            # temp_X = window_sum_Z(
+            #     Zprev, I=I, alpha=alpha, beta=beta)
+            # temp_Y = Zprev - temp_X
+            # Zprev = X_GT[:, count + 1] + temp_Y
+
+            temp_Y = filter_Z(Zprev, window_s)
+            temp_Y = temp_Y.real
+            temp_X = filter_Z(Z_GT[:, count + 1], window_l)
+            temp_X = temp_X.real
+            Zprev = temp_X + temp_Y
+        elif pert_var == 'X':
+            # temp_X = window_sum_Z(
+            #     Zprev, I=I, alpha=alpha, beta=beta)
+            # Zprev = Y_GT[:, count + 1] + temp_X
+
+            temp_X = filter_Z(Zprev, window_l)
+            temp_X = temp_X.real
+            temp_Y = filter_Z(Z_GT[:, count + 1], window_s)
+            temp_Y = temp_Y.real
+            Zprev = temp_X + temp_Y
+        if every != 1:
+            if (count + 1) % every == 0:
+                count_obs += 1
+                Z[:, count_obs] = Zprev
+        else:
+            Z[:, count + 1] = Zprev
+    return Z
+
+
+def return_LM3_data_Xpert(Z_GT, Y_GT, X0pert, dt, T, dt_obs,
+                          K=32, I=12, F=15, b=10, c=2.5,
+                          alpha=None, beta=None):
+    if alpha is None:
+        alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+    if beta is None:
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+    N_Z = Z_GT.shape[0]
+    def this_LM3(Z, t):
+        dZdt = LM3(Z, K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        return dZdt
+    Nz = Z_GT.shape[0]
+    Nt = int(T/dt) + 1
+    Nto = int(T/dt_obs) + 1
+    Z = np.ones([Nz, Nto])*np.nan
+    every = int(dt_obs/dt)
+    #print(Z0)
+    Z[:, 0] = Z_GT[:, 0] + X0pert
+    Zprev = Z[:, 0].copy()
+    count_obs = 0
+    every_print = int(Nt/10)
+    if every != 1:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            temp_X = window_sum_Z(
+                Zprev, I=I, alpha=alpha, beta=beta)
+            temp_Y = Zprev - temp_X
+            Zprev = Y_GT[:, ii + 1] + temp_X
+            if (count + 1) % every == 0:
+                count_obs += 1
+                Z[:, count_obs] = Zprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
+    else:
+        for count in range(Nt - 1):
+            Zprev = RK4(this_LM3, Zprev, dt, np.nan)
+            Z[:, count + 1] = Zprev
+            if count + 1 % every_print == 0:
+                print((ii*100)//Nt + 1)
+    return Z
+
+
 def return_LM3_ens_data(Z0_ens, dt, T, dt_obs, K=None,
                         I=None, F=None, b=None, c=None,
                         alpha=None, beta=None):

@@ -960,7 +960,6 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
                         Rz, Hz,
                         rho_Zc=None,
                         rho_Zf=None,
-                        infl=None,
                         N_laml=None,
                         smooth_len=None,
                         infl=None, return_ens=False,
@@ -989,7 +988,8 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
 
     for count_kf in range(Nkf):
         Zens_f = utilities.return_LM3_ens_data(
-            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf)
+            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf,
+            K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
         Zens_f = Zens_f[:, :, -1]
         mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
         std_f[:, count_kf] = np.std(Zens_f, axis=-1)
@@ -1003,6 +1003,112 @@ def cycle_KF_LM3_smooth(*, Z0ens, Zobs_ts,
             H_Z=Hz, R_Z=Rz,
             a=infl, rho_Zc=rho_Zc,
             rho_Zf=rho_Zf,
+            N_laml=N_laml,
+            smooth_len=smooth_len)
+        Zens_f = Zens_a.copy()
+        mu_a[:, count_kf] = np.mean(Zens_a, axis=-1)
+        std_a[:, count_kf] = np.std(Zens_a, axis=-1)
+        if return_ens:
+            ens_a[:, :, count_kf] = Zens_a
+
+    mu_f = xr.DataArray(
+        data=mu_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_f = xr.DataArray(
+        data=std_f,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    mu_a = xr.DataArray(
+        data=mu_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    std_a = xr.DataArray(
+        data=std_a,
+        dims=('loc', 'time'),
+        coords={'loc': Zloc,
+                'time': t_kf})
+    if return_ens:
+        ens_f = xr.DataArray(
+            data=ens_f,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf})
+        ens_a = xr.DataArray(
+            data=ens_a,
+            dims=('loc', 'ens_num', 'time'),
+            coords={'loc': Zloc,
+                    'ens_num': Zens_num,
+                    'time': t_kf})
+        to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a,
+            'ens_f': ens_f,
+            'ens_a': ens_a
+        }
+    else:
+        to_return = {
+            'mu_f': mu_f,
+            'std_f': std_f,
+            'mu_a': mu_a,
+            'std_a': std_a
+        }
+    return to_return
+
+
+def cycle_KF_LM3_smooth_Pl(*, Z0ens, Zobs_ts,
+                        Tkf, dt_kf,
+                        dt_rk,
+                        Rz, Hz,
+                        rho_Zc=None,
+                        N_laml=None,
+                        smooth_len=None,
+                        infl=None, return_ens=False,
+                        K=None, I=None, F=None,
+                        b=None, c=None, alpha=None, beta=None):
+    # t_obs = Zobs_ts['time'].values
+    # dt_obs = t_obs[1] - t_obs[0]
+    # t_cycle = np.linspace(0, dt_obs, int(dt_obs/dt + 1))
+
+    Nz, Nez = Z0ens.shape
+    Zloc = np.arange(Nz)
+    Zens_num = np.arange(Nez)
+    Nkf = int(Tkf/dt_kf)
+
+    mu_f = np.ones([Nz, Nkf]) * np.nan
+    std_f = mu_f.copy()
+    mu_a = mu_f.copy()
+    std_a = mu_f.copy()
+    if return_ens:
+        ens_f = np.ones([Nz, Nez, Nkf]) * np.nan
+        ens_a = np.ones([Nz, Nez, Nkf]) * np.nan
+
+    t_kf = []
+    t=0
+    Zens_f = Z0ens.copy()
+
+    for count_kf in range(Nkf):
+        Zens_f = utilities.return_LM3_ens_data(
+            Zens_f, dt=dt_rk, T=dt_kf, dt_obs=dt_kf,
+            K=K, I=I, F=F, b=b, c=c, alpha=alpha, beta=beta)
+        Zens_f = Zens_f[:, :, -1]
+        mu_f[:, count_kf] = np.mean(Zens_f, axis=-1)
+        std_f[:, count_kf] = np.std(Zens_f, axis=-1)
+        if return_ens:
+            ens_f[:, :, count_kf] = Zens_f
+
+        t = dt_kf * (count_kf + 1)
+        t_kf.append(t)
+        Zens_a = smooth_enkf_Pl(
+            Z_ens=Zens_f, Z_obs=Zobs_ts.sel(time=t).values,
+            H_Z=Hz, R_Z=Rz,
+            a=infl, rho_Zc=rho_Zc,
             N_laml=N_laml,
             smooth_len=smooth_len)
         Zens_f = Zens_a.copy()
@@ -1082,23 +1188,91 @@ def smooth_enkf(*, Z_ens, Z_obs, H_Z, R_Z,
         if smooth_len > 0:
             Z_ens_smooth = ndimage.gaussian_filter1d(
                 Z_ens_copy, smooth_len, axis=0, mode='wrap')
+            Pz_sam_smooth = np.cov(Z_ens_smooth)
+            Pz_sam = np.cov(Z_ens_copy)
+        if rho_Zc is not None:
+            Pz_sam_smooth *= rho_Zc
+            Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
+            Lam_zsmooth = Lam_zsmooth[::-1]
+            Qzsmooth = Qzsmooth[:, ::-1]
+            Qzl_sam = Qzsmooth[:, :N_laml]
+            Qzl_sam, temp = np.linalg.qr(Qzl_sam)
+            Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
+            Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
+            Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
+            Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
+        if rho_Zf is not None:
+            Pz_orth_sam *=rho_Zf
+            Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
+            P_Z = Pz_Qsam + Pz_orth_sam
+    else:
+        I = 12
+        LM3_alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
+        beta = (2 * I**2 + 1) / (I**4 + 2 * I**2)
+        Z_ens_smooth = utilities.window_sum_Z(
+            Z_ens_copy, I=I, alpha=LM3_alpha, beta=beta)
         Pz_sam_smooth = np.cov(Z_ens_smooth)
         Pz_sam = np.cov(Z_ens_copy)
         if rho_Zc is not None:
             Pz_sam_smooth *= rho_Zc
-        Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
-        Lam_zsmooth = Lam_zsmooth[::-1]
-        Qzsmooth = Qzsmooth[:, ::-1]
-        Qzl_sam = Qzsmooth[:, :N_laml]
-        Qzl_sam, temp = np.linalg.qr(Qzl_sam)
-        Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
-        Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
-        Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
-        Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
+            Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
+            Lam_zsmooth = Lam_zsmooth[::-1]
+            Qzsmooth = Qzsmooth[:, ::-1]
+            Qzl_sam = Qzsmooth[:, :N_laml]
+            Qzl_sam, temp = np.linalg.qr(Qzl_sam)
+            Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
+            Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
+            Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
+            Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
         if rho_Zf is not None:
             Pz_orth_sam *=rho_Zf
             Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
-        P_Z = Pz_Qsam + Pz_orth_sam
+            P_Z = Pz_Qsam + Pz_orth_sam
+    K = P_Z @ H_Z.T @ np.linalg.pinv(H_Z @ P_Z @ H_Z.T + R_Z)
+    Z_obs_ens = np.random.multivariate_normal(Z_obs, R_Z, N_eZ).T
+
+    Z_ens_a = Z_ens_copy + K @ (Z_obs_ens - H_Z @ Z_ens_copy)
+    return Z_ens_a
+
+
+def smooth_enkf_Pl(*, Z_ens, Z_obs, H_Z, R_Z,
+                a=None,
+                rho_Zc=None,
+                N_laml=None,
+                smooth_len=None):
+    """
+    Should change eigh to random svd and not calculate Pz_sam
+    """
+    ###
+    Z_ens_copy = Z_ens.copy()
+    N_Z, N_eZ = Z_ens_copy.shape
+    if a is not None:
+        mu_Z = np.mean(Z_ens_copy, axis=-1)
+        Z_ens_copy -= mu_Z[:, None]
+        Z_ens_copy *= np.sqrt(1 + a)
+        Z_ens_copy += mu_Z[:, None]
+    if smooth_len is not None:
+        if smooth_len > 0:
+            Z_ens_smooth = ndimage.gaussian_filter1d(
+                Z_ens_copy, smooth_len, axis=0, mode='wrap')
+        Pz_sam_smooth = np.cov(Z_ens_smooth)
+        # Pz_sam = np.cov(Z_ens_copy)
+        # if rho_Zc is not None:
+        #     Pz_sam_smooth *= rho_Zc
+        # Lam_zsmooth, Qzsmooth = np.linalg.eigh(Pz_sam_smooth)
+        # Lam_zsmooth = Lam_zsmooth[::-1]
+        # Qzsmooth = Qzsmooth[:, ::-1]
+        # Qzl_sam = Qzsmooth[:, :N_laml]
+        # Qzl_sam, temp = np.linalg.qr(Qzl_sam)
+        # # Proj_sam = np.eye(N_Z) - Qzl_sam @ Qzl_sam.T
+        # Lam_zl_sam = np.diag(Qzl_sam.T @ Pz_sam @ Qzl_sam)
+        # Pz_Qsam = Qzl_sam @ np.diag(Lam_zl_sam) @ Qzl_sam.T
+        # Pz_orth_sam = Proj_sam @ Pz_sam @ Proj_sam
+        # if rho_Zf is not None:
+        #     Pz_orth_sam *=rho_Zf
+        #     Pz_orth_sam = Proj_sam @ Pz_orth_sam @ Proj_sam
+        # P_Z = Pz_Qsam + Pz_orth_sam
+        P_Z = Pz_sam_smooth.copy()
     else:
         I = 12
         LM3_alpha = (3 * I**2 + 3) / (2 * I**3 + 4 * I)
